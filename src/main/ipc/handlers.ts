@@ -406,6 +406,18 @@ export function registerIpcHandlers(): void {
         },
     );
 
+    ipcMain.handle("attachment:rename", async (event: IpcMainInvokeEvent, attachment_id: number, new_name: string) => {
+        try {
+            const updated = attachmentService.renameAttachment(attachment_id, new_name);
+            if (!updated) {
+                return { success: false, error: "Attachment not found" };
+            }
+            return { success: true, data: updated };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    });
+
     ipcMain.handle("attachment:openExternal", async (event: IpcMainInvokeEvent, attachment_id: number) => {
         try {
             const path = attachmentService.getAttachmentFilePath(attachment_id, false);

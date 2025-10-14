@@ -1,11 +1,12 @@
 import type { ContextBridge } from "@common/ContextBridge";
+import type { AppSettings } from "@common/types";
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
     onNativeThemeChanged: (callback: () => void) => ipcRenderer.on("nativeThemeChanged", callback),
     themeShouldUseDarkColors: () => ipcRenderer.sendSync("themeShouldUseDarkColors"),
-    onSettingsChanged: (callback: (settings: any) => void) =>
-        ipcRenderer.on("settings:changed", (_event, settings) => callback(settings)),
+    onSettingsChanged: (callback: (settings: AppSettings) => void) =>
+        ipcRenderer.on("settings:changed", (_event, settings: AppSettings) => callback(settings)),
 
     // Settings operations
     settings: {
@@ -59,6 +60,7 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         delete: (attachment_id) => ipcRenderer.invoke("attachment:delete", attachment_id),
         getPath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getPath", attachment_id, use_watermarked),
         openExternal: (attachment_id) => ipcRenderer.invoke("attachment:openExternal", attachment_id),
+        rename: (attachment_id, new_name) => ipcRenderer.invoke("attachment:rename", attachment_id, new_name),
     },
 
     // Watermark operations

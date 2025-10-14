@@ -1,6 +1,21 @@
-import { BrowserWindow, app, ipcMain, nativeTheme, type IpcMainEvent } from "electron";
+import { BrowserWindow, app, ipcMain, nativeTheme, protocol, type IpcMainEvent } from "electron";
 import { join } from "path";
 import { registerIpcHandlers } from "./ipc/handlers";
+import { join as pathJoin, normalize as pathNormalize } from "path";
+
+// Register custom protocol privileges before app ready
+protocol.registerSchemesAsPrivileged([
+    {
+        scheme: "reimbursement",
+        privileges: {
+            standard: true,
+            secure: true,
+            supportFetchAPI: true,
+            corsEnabled: true,
+            stream: true,
+        },
+    },
+]);
 
 const createBrowserWindow = (): BrowserWindow => {
     const preloadScriptFilePath = join(__dirname, "..", "dist-preload", "index.js");
@@ -42,6 +57,38 @@ const registerNativeThemeEventListeners = (allBrowserWindows: BrowserWindow[]) =
 
 (async () => {
     await app.whenReady();
+    // Register reimbursement:// protocol to serve files from app storage
+    const storageRoot = pathJoin(app.getPath("userData"), "storage", "projects");
+    protocol.registerFileProtocol("reimbursement", (request, callback) => {
+        try {
+            const url = new URL(request.url);
+            const host = url.hostname || url.host || "";
+            const pathname = url.pathname || "/";
+
+            let rel: string | null = null;
+            // Form 1: reimbursement://attachments/<rel>
+            if (host === "attachments") {
+                rel = decodeURIComponent(pathname.replace(/^\//, ""));
+            }
+            // Form 2: reimbursement:///attachments/<rel>
+            const prefix = "/attachments/";
+            if (!rel && pathname.startsWith(prefix)) {
+                rel = decodeURIComponent(pathname.slice(prefix.length));
+            }
+            if (!rel || rel.length === 0) {
+                return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+            }
+            // Relative path under storage root
+            // Prevent path traversal
+            const resolved = pathNormalize(pathJoin(storageRoot, rel));
+            if (!resolved.startsWith(storageRoot)) {
+                return callback({ error: -10 }); // net::ERR_ACCESS_DENIED
+            }
+            callback({ path: resolved });
+        } catch {
+            callback({ error: -2 }); // net::FAILED
+        }
+    });
     const mainWindow = createBrowserWindow();
     loadFileOrUrl(mainWindow);
     registerIpcEventListeners();

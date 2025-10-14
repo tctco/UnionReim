@@ -60,6 +60,17 @@ export function useAttachments() {
         }
     }, []);
 
+    const renameAttachment = useCallback(async (attachment_id: number, new_name: string) => {
+        setError(null);
+        const response = await window.ContextBridge.attachment.rename(attachment_id, new_name);
+        if (response.success && response.data) {
+            return response.data as Attachment;
+        } else {
+            setError(response.error || "Failed to rename attachment");
+            throw new Error(response.error);
+        }
+    }, []);
+
     const applyWatermark = useCallback(async (attachment_id: number) => {
         setLoading(true);
         setError(null);
@@ -87,6 +98,7 @@ export function useAttachments() {
         deleteAttachment,
         getAttachmentPath,
         openExternal,
+        renameAttachment,
         applyWatermark,
     };
 }

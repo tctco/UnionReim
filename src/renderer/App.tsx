@@ -63,7 +63,7 @@ export const App = () => {
         <FluentProvider theme={theme} style={{ height: "100vh" }}>
             <AppLayout>
                 <Routes>
-                    <Route path="/" element={<Navigate to="/templates" replace />} />
+                    <Route path="/" element={<Navigate to="/projects" replace />} />
                     <Route path="/templates" element={<TemplateListPage />} />
                     <Route path="/templates/new" element={<TemplateEditorPage />} />
                     <Route path="/templates/:id" element={<TemplateViewPage />} />

@@ -99,7 +99,9 @@ export class WatermarkService {
         attachment: any,
         config: WatermarkConfig,
     ): Promise<string> {
-        const image = await loadImage(originalPath);
+        // Load image from buffer to avoid platform-specific path resolution issues
+        const imgBuffer = readFileSync(originalPath);
+        const image = await loadImage(imgBuffer);
         const canvas = createCanvas(image.width, image.height);
         const ctx = canvas.getContext("2d");
 
@@ -144,11 +146,25 @@ export class WatermarkService {
             mkdirSync(watermarkedDir, { recursive: true });
         }
 
-        const ext = extname(originalPath);
-        const watermarkedPath = join(watermarkedDir, attachment.file_name.replace(ext, `_wm${ext}`));
+        const ext = extname(originalPath).toLowerCase();
+        let outExt = ext;
+        let outBuffer: Buffer;
+        if (ext === ".jpg" || ext === ".jpeg") {
+            outExt = ".jpg";
+            // Encode as JPEG if original was JPEG
+            // @ts-ignore canvas types may not include jpeg in older typings
+            outBuffer = canvas.toBuffer("image/jpeg");
+        } else {
+            outExt = ".png";
+            outBuffer = canvas.toBuffer("image/png");
+        }
 
-        const buffer = canvas.toBuffer("image/png");
-        writeFileSync(watermarkedPath, buffer);
+        const watermarkedPath = join(
+            watermarkedDir,
+            attachment.file_name.replace(ext, `_wm${outExt}`),
+        );
+
+        writeFileSync(watermarkedPath, outBuffer);
 
         return watermarkedPath;
     }
@@ -218,4 +234,3 @@ export class WatermarkService {
         return watermarkedPath;
     }
 }
-

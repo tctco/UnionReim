@@ -1,7 +1,9 @@
-import type { Attachment, ProjectItemWithDetails, Template } from "@common/types";
+import type { Attachment, ProjectItemWithDetails, Template, AppSettings } from "@common/types";
 import {
+    Badge,
     Body1,
     Button,
+    Caption1,
     Card,
     Field,
     Input,
@@ -10,9 +12,17 @@ import {
     Textarea,
     Title3,
     tokens,
-    Badge,
-    Caption1,
     Tooltip,
+    Toaster,
+    useToastController,
+    Toast,
+    ToastTitle,
+    Dialog,
+    DialogSurface,
+    DialogBody,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from "@fluentui/react-components";
 import {
     ArrowUpload24Regular,
@@ -21,11 +31,14 @@ import {
     Eye24Regular,
     Save24Regular,
     Sparkle24Regular,
+    Copy24Regular,
+    Rename24Regular,
 } from "@fluentui/react-icons";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { useAttachments } from "../hooks/useAttachments";
+import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
 import { useProject, useProjects } from "../hooks/useProjects";
 import { useTemplates } from "../hooks/useTemplates";
 
@@ -96,7 +109,7 @@ export function ProjectEditorPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams<{ id: string }>();
-    
+
     // 检查路径来判断是新建还是编辑模式
     const isNew = location.pathname === "/projects/new";
     const projectId = isNew ? null : parseInt(id || "0");
@@ -104,7 +117,8 @@ export function ProjectEditorPage() {
     const { templates } = useTemplates();
     const { createProject } = useProjects();
     const { project, loading, loadProject } = useProject(projectId);
-    const { uploadAttachment, deleteAttachment, applyWatermark } = useAttachments();
+    const { uploadAttachment, deleteAttachment, applyWatermark, renameAttachment } = useAttachments();
+    const { dispatchToast } = useToastController();
 
     const [name, setName] = useState("");
     const [creator, setCreator] = useState("");
@@ -119,6 +133,29 @@ export function ProjectEditorPage() {
             setDescription(project.metadata?.description || "");
         }
     }, [project]);
+
+    // hover preview state (reuse same logic as ProjectPreviewPage)
+    const [hoveredAttachment, setHoveredAttachment] = useState<Pick<Attachment, "attachment_id" | "file_type"> | null>(null);
+    const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 360, height: 240 });
+
+    useEffect(() => {
+        let mounted = true;
+        async function load() {
+            const res = await window.ContextBridge.settings.get();
+            if (mounted && res.success && res.data) {
+                const s = res.data as AppSettings;
+                setPreviewSize({ width: s.hoverPreviewWidth ?? 360, height: s.hoverPreviewHeight ?? 240 });
+            }
+        }
+        load();
+        window.ContextBridge.onSettingsChanged((s: AppSettings) => {
+            setPreviewSize({ width: s.hoverPreviewWidth ?? 360, height: s.hoverPreviewHeight ?? 240 });
+        });
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const handleCreateProject = async () => {
         if (!selectedTemplate) {
@@ -156,7 +193,7 @@ export function ProjectEditorPage() {
 
     const handleDeleteConfirm = async () => {
         if (!deleteConfirmAttachment) return;
-        
+
         try {
             await deleteAttachment(deleteConfirmAttachment.attachment_id);
             if (projectId) {
@@ -170,7 +207,7 @@ export function ProjectEditorPage() {
     };
 
     const handleWatermark = async (attachment: Attachment) => {
-        console.log(attachment)
+        console.log(attachment);
         try {
             await applyWatermark(attachment.attachment_id);
             if (projectId) {
@@ -186,6 +223,51 @@ export function ProjectEditorPage() {
             await window.ContextBridge.attachment.openExternal(attachment.attachment_id);
         } catch (err) {
             console.error("Failed to preview file:", err);
+        }
+    };
+
+    const handleCopyPath = async (attachment: Attachment) => {
+        try {
+            const abs = await window.ContextBridge.attachment.getPath(attachment.attachment_id, false);
+            if (abs.success && abs.data) {
+                await navigator.clipboard.writeText(abs.data);
+                dispatchToast(
+                    <Toast>
+                        <ToastTitle>Copied</ToastTitle>
+                    </Toast>,
+                    { intent: "success", timeout: 1500 }
+                );
+            }
+        } catch (err) {
+            console.error("Failed to copy path:", err);
+        }
+    };
+
+    const [renameTarget, setRenameTarget] = useState<Attachment | null>(null);
+    const [renameInput, setRenameInput] = useState<string>("");
+    const openRenameDialog = (attachment: Attachment) => {
+        setRenameTarget(attachment);
+        setRenameInput(attachment.original_name.replace(/\.[^.]+$/, ""));
+    };
+    const closeRenameDialog = () => {
+        setRenameTarget(null);
+        setRenameInput("");
+    };
+    const confirmRename = async () => {
+        const trimmed = renameInput.trim();
+        if (!trimmed || !renameTarget) {
+            closeRenameDialog();
+            return;
+        }
+        try {
+            await renameAttachment(renameTarget.attachment_id, trimmed);
+            if (projectId) {
+                await loadProject(projectId);
+            }
+        } catch (err) {
+            console.error("Failed to rename attachment:", err);
+        } finally {
+            closeRenameDialog();
         }
     };
 
@@ -253,11 +335,7 @@ export function ProjectEditorPage() {
                         />
                     </Field>
                     <Field label="Creator">
-                        <Input
-                            value={creator}
-                            onChange={(_, data) => setCreator(data.value)}
-                            placeholder="Your name"
-                        />
+                        <Input value={creator} onChange={(_, data) => setCreator(data.value)} placeholder="Your name" />
                     </Field>
                     <Field label="Description">
                         <Textarea
@@ -281,18 +359,13 @@ export function ProjectEditorPage() {
                     <Title3>{project.name}</Title3>
                     <Caption1>Template: {project.template.name}</Caption1>
                 </div>
-                <Button 
-                    appearance="primary"
-                    onClick={() => navigate(`/projects/${project.project_id}`)}
-                >
+                <Button appearance="primary" onClick={() => navigate(`/projects/${project.project_id}`)}>
                     Preview
                 </Button>
             </div>
 
             <div className={styles.section}>
-                <Body1 style={{ fontWeight: tokens.fontWeightSemibold, marginBottom: "16px" }}>
-                    Project Items
-                </Body1>
+                <Body1 style={{ fontWeight: tokens.fontWeightSemibold, marginBottom: "16px" }}>Project Items</Body1>
 
                 {project.items.map((item) => (
                     <div key={item.project_item_id} className={styles.itemCard}>
@@ -328,12 +401,25 @@ export function ProjectEditorPage() {
                         {item.attachments.length > 0 && (
                             <div className={styles.attachmentList}>
                                 {item.attachments.map((attachment) => (
-                                    <div key={attachment.attachment_id} className={styles.attachmentItem}>
+                                    <div
+                                        key={attachment.attachment_id}
+                                        className={styles.attachmentItem}
+                                        onMouseEnter={(e) => {
+                                            setHoveredAttachment({ attachment_id: attachment.attachment_id, file_type: attachment.file_type });
+                                            setMousePos({ x: e.clientX, y: e.clientY });
+                                        }}
+                                        onMouseMove={(e) => {
+                                            setMousePos({ x: e.clientX, y: e.clientY });
+                                        }}
+                                        onMouseLeave={() => setHoveredAttachment(null)}
+                                    >
                                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                             <DocumentRegular />
                                             <Caption1>{attachment.original_name}</Caption1>
-                                            {attachment.has_watermark && (
+                                            {attachment.has_watermark ? (
                                                 <Badge color="success">Watermarked</Badge>
+                                            ) : (
+                                                <></>
                                             )}
                                         </div>
                                         <div style={{ display: "flex", gap: "4px" }}>
@@ -342,6 +428,22 @@ export function ProjectEditorPage() {
                                                     size="small"
                                                     icon={<Eye24Regular />}
                                                     onClick={() => handlePreview(attachment)}
+                                                    appearance="subtle"
+                                                />
+                                            </Tooltip>
+                                            <Tooltip content="Copy path" relationship="label">
+                                                <Button
+                                                    size="small"
+                                                    icon={<Copy24Regular />}
+                                                    onClick={() => handleCopyPath(attachment)}
+                                                    appearance="subtle"
+                                                />
+                                            </Tooltip>
+                                            <Tooltip content="Rename" relationship="label">
+                                                <Button
+                                                    size="small"
+                                                    icon={<Rename24Regular />}
+                                                    onClick={() => openRenameDialog(attachment)}
                                                     appearance="subtle"
                                                 />
                                             </Tooltip>
@@ -356,12 +458,12 @@ export function ProjectEditorPage() {
                                                 </Tooltip>
                                             )}
                                             <Tooltip content="Delete file" relationship="label">
-                                            <Button
-                                                size="small"
-                                                icon={<Delete24Regular />}
-                                                onClick={() => handleDeleteClick(attachment)}
-                                                appearance="subtle"
-                                            />
+                                                <Button
+                                                    size="small"
+                                                    icon={<Delete24Regular />}
+                                                    onClick={() => handleDeleteClick(attachment)}
+                                                    appearance="subtle"
+                                                />
                                             </Tooltip>
                                         </div>
                                     </div>
@@ -372,10 +474,48 @@ export function ProjectEditorPage() {
                 ))}
             </div>
 
+            <AttachmentHoverPreview
+                visible={!!hoveredAttachment}
+                x={mousePos.x}
+                y={mousePos.y}
+                attachment={hoveredAttachment}
+                maxWidth={previewSize.width}
+                maxHeight={previewSize.height}
+            />
+
+            {/* Rename Dialog */}
+            <Dialog open={!!renameTarget} onOpenChange={(_, data) => !data.open && closeRenameDialog()}>
+                <DialogSurface>
+                    <DialogBody>
+                        <DialogTitle>重命名文件</DialogTitle>
+                        <DialogContent>
+                            <Field label="新文件名（不含扩展名）">
+                                <Input
+                                    value={renameInput}
+                                    onChange={(_, data) => setRenameInput(data.value)}
+                                    placeholder="请输入新文件名"
+                                />
+                            </Field>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button appearance="secondary" onClick={closeRenameDialog}>取消</Button>
+                            <Button appearance="primary" onClick={confirmRename}>确定</Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
+
+            {/* Toaster for copied feedback */}
+            <Toaster />
+
             {/* Delete Confirmation Dialog */}
             <ConfirmDialog
                 title="删除文件"
-                message={deleteConfirmAttachment ? `确定要删除文件 "${deleteConfirmAttachment.original_name}"？此操作无法撤销。` : ""}
+                message={
+                    deleteConfirmAttachment
+                        ? `确定要删除文件 "${deleteConfirmAttachment.original_name}"？此操作无法撤销。`
+                        : ""
+                }
                 confirmText="删除"
                 cancelText="取消"
                 onConfirm={handleDeleteConfirm}
@@ -387,5 +527,3 @@ export function ProjectEditorPage() {
         </div>
     );
 }
-
-

@@ -255,6 +255,44 @@ export function SettingsPage() {
                         </div>
                     </Field>
                 </Card>
+
+                {/* 预览设置 */}
+                <Card className={styles.card}>
+                    <CardHeader>
+                        <div className={styles.cardTitle}>
+                            <Settings24Regular />
+                            预览设置
+                        </div>
+                    </CardHeader>
+
+                    <Field className={styles.field}>
+                        <Label htmlFor="hoverPreviewWidth">预览宽度（px）</Label>
+                        <Input
+                            id="hoverPreviewWidth"
+                            type="number"
+                            value={String(formData.hoverPreviewWidth ?? 400)}
+                            onChange={(_, data) =>
+                                setFormData({ ...formData, hoverPreviewWidth: Number(data.value || 0) })
+                            }
+                            min={120}
+                            step={10}
+                        />
+                    </Field>
+
+                    <Field className={styles.field}>
+                        <Label htmlFor="hoverPreviewHeight">预览高度（px）</Label>
+                        <Input
+                            id="hoverPreviewHeight"
+                            type="number"
+                            value={String(formData.hoverPreviewHeight ?? 240)}
+                            onChange={(_, data) =>
+                                setFormData({ ...formData, hoverPreviewHeight: Number(data.value || 0) })
+                            }
+                            min={80}
+                            step={10}
+                        />
+                    </Field>
+                </Card>
             </div>
 
             {/* 操作按钮 */}

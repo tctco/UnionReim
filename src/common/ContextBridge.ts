@@ -83,6 +83,7 @@ export type ContextBridge = {
         delete: (attachment_id: number) => Promise<ApiResponse<boolean>>;
         getPath: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<string>>;
         openExternal: (attachment_id: number) => Promise<ApiResponse<void>>;
+        rename: (attachment_id: number, new_name: string) => Promise<ApiResponse<Attachment>>;
     };
 
     // Watermark operations

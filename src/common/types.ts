@@ -85,6 +85,8 @@ export interface AppSettings {
     theme?: 'light' | 'dark' | 'system';
     defaultStoragePath?: string;
     language?: string;
+    hoverPreviewWidth?: number;
+    hoverPreviewHeight?: number;
 }
 
 export interface SettingsUpdateRequest {

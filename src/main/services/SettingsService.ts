@@ -6,6 +6,8 @@ export interface AppSettings {
     theme?: 'light' | 'dark' | 'system';
     defaultStoragePath?: string;
     language?: string;
+    hoverPreviewWidth?: number;
+    hoverPreviewHeight?: number;
 }
 
 export class SettingsService {
@@ -21,6 +23,8 @@ export class SettingsService {
         const defaults: AppSettings = {
             theme: 'system',
             language: 'zh-CN',
+            hoverPreviewWidth: 400,
+            hoverPreviewHeight: 400,
         };
 
         for (const [key, value] of Object.entries(defaults)) {
@@ -102,6 +106,8 @@ export class SettingsService {
             theme: (allSettings.theme as 'light' | 'dark' | 'system') || 'system',
             defaultStoragePath: allSettings.defaultStoragePath || undefined,
             language: allSettings.language || 'zh-CN',
+            hoverPreviewWidth: allSettings.hoverPreviewWidth ? Number(allSettings.hoverPreviewWidth) : 400,
+            hoverPreviewHeight: allSettings.hoverPreviewHeight ? Number(allSettings.hoverPreviewHeight) : 400,
         };
     }
 

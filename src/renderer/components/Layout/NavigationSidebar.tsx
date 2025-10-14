@@ -22,7 +22,7 @@ const useStyles = makeStyles({
         width: "240px",
     },
     sidebarCollapsed: {
-        width: "60px",
+        width: "38px",
         padding: "16px 8px",
     },
     header: {
@@ -91,11 +91,11 @@ export function NavigationSidebar() {
                 vertical
                 className={styles.tabList}
             >
-                <Tab value="templates" icon={<DocumentMultiple24Regular />}>
-                    {!isCollapsed && "Templates"}
-                </Tab>
                 <Tab value="projects" icon={<Folder24Regular />}>
                     {!isCollapsed && "Projects"}
+                </Tab>
+                <Tab value="templates" icon={<DocumentMultiple24Regular />}>
+                    {!isCollapsed && "Templates"}
                 </Tab>
                 <Tab value="settings" icon={<Settings24Regular />}>
                     {!isCollapsed && "Settings"}

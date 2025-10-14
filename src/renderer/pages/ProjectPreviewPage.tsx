@@ -6,7 +6,6 @@ import {
     makeStyles,
     Spinner,
     Title1,
-    Title2,
     Title3,
     tokens,
     Table,
@@ -16,9 +15,12 @@ import {
     TableHeaderCell,
     TableRow,
 } from "@fluentui/react-components";
-import { ArrowUpload24Regular } from "@fluentui/react-icons";
-import { useNavigate, useParams } from "react-router";
+import { ArrowUpload24Regular, Edit24Regular } from "@fluentui/react-icons";
+import { useParams, useNavigate } from "react-router";
 import { useProject, useProjects } from "../hooks/useProjects";
+import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
+import type { AppSettings, Attachment } from "@common/types";
+import { useEffect, useState } from "react";
 
 const useStyles = makeStyles({
     container: {
@@ -84,9 +86,41 @@ export function ProjectPreviewPage() {
     const styles = useStyles();
     const { id } = useParams<{ id: string }>();
     const projectId = parseInt(id || "0");
+    const navigate = useNavigate();
 
     const { project, loading } = useProject(projectId);
     const { exportProject } = useProjects();
+
+    // hover preview state
+    const [hoveredAttachment, setHoveredAttachment] = useState<Pick<Attachment, "attachment_id" | "file_type"> | null>(null);
+    const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 400, height: 400 });
+
+    // load settings for preview size
+    useEffect(() => {
+        let mounted = true;
+        async function load() {
+            const res = await window.ContextBridge.settings.get();
+            if (mounted && res.success && res.data) {
+                const s = res.data as AppSettings;
+                setPreviewSize({
+                    width: s.hoverPreviewWidth ?? 400,
+                    height: s.hoverPreviewHeight ?? 400,
+                });
+            }
+        }
+        load();
+        window.ContextBridge.onSettingsChanged((s: AppSettings) => {
+            setPreviewSize({
+                width: s.hoverPreviewWidth ?? 400,
+                height: s.hoverPreviewHeight ?? 400,
+            });
+        });
+        return () => {
+            mounted = false;
+            // ipcRenderer.on 返回的是 void，此处无需显式移除，主进程广播足够轻量
+        };
+    }, []);
 
     const handleExport = async () => {
         try {
@@ -111,13 +145,21 @@ export function ProjectPreviewPage() {
         <div className={styles.container}>
             <div className={styles.header}>
                 <Title1>{project.name}</Title1>
-                <Button
-                    appearance="primary"
-                    icon={<ArrowUpload24Regular />}
-                    onClick={handleExport}
-                >
-                    Export Project
-                </Button>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <Button
+                        icon={<Edit24Regular />}
+                        onClick={() => navigate(`/projects/${projectId}/edit`)}
+                    >
+                        Edit
+                    </Button>
+                    <Button
+                        appearance="primary"
+                        icon={<ArrowUpload24Regular />}
+                        onClick={handleExport}
+                    >
+                        Export
+                    </Button>
+                </div>
             </div>
 
             <div className={styles.metadata}>
@@ -178,7 +220,19 @@ export function ProjectPreviewPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {item.attachments.map((attachment) => (
-                                        <TableRow key={attachment.attachment_id}>
+                                        <TableRow
+                                            key={attachment.attachment_id}
+                                            onMouseEnter={(e) => {
+                                                setHoveredAttachment({ attachment_id: attachment.attachment_id, file_type: attachment.file_type });
+                                                setMousePos({ x: e.clientX, y: e.clientY });
+                                            }}
+                                            onMouseMove={(e) => {
+                                                setMousePos({ x: e.clientX, y: e.clientY });
+                                            }}
+                                            onMouseLeave={() => {
+                                                setHoveredAttachment(null);
+                                            }}
+                                        >
                                             <TableCell>{attachment.original_name}</TableCell>
                                             <TableCell>{(attachment.file_size / 1024).toFixed(1)} KB</TableCell>
                                             <TableCell>{attachment.file_type.toUpperCase()}</TableCell>
@@ -199,6 +253,15 @@ export function ProjectPreviewPage() {
                     </Card>
                 ))}
             </div>
+
+            <AttachmentHoverPreview
+                visible={!!hoveredAttachment}
+                x={mousePos.x}
+                y={mousePos.y}
+                attachment={hoveredAttachment}
+                maxWidth={previewSize.width}
+                maxHeight={previewSize.height}
+            />
         </div>
     );
 }

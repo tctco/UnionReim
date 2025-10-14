@@ -1,8 +1,8 @@
 import type { Attachment } from "@common/types";
 import type Database from "better-sqlite3";
 import { app } from "electron";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from "fs";
-import { basename, extname, join } from "path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync } from "fs";
+import { basename, extname, join, dirname } from "path";
 import { DatabaseService } from "../database/Database";
 
 export class AttachmentService {
@@ -23,7 +23,7 @@ export class AttachmentService {
     uploadAttachment(project_item_id: number, source_file_path: string, original_name: string): Attachment {
         // Get project_id from project_item
         const projectItemStmt = this.db.prepare("SELECT project_id FROM project_items WHERE project_item_id = ?");
-        const projectItem = projectItemStmt.get(project_item_id) as any;
+        const projectItem = projectItemStmt.get(project_item_id) as { project_id: number } | undefined;
 
         if (!projectItem) {
             throw new Error(`Project item ${project_item_id} not found`);
@@ -93,13 +93,37 @@ export class AttachmentService {
             WHERE attachment_id = ?
         `);
 
-        const row = stmt.get(attachment_id) as any;
+        const row = stmt.get(attachment_id) as
+            | {
+                  attachment_id: number;
+                  project_item_id: number;
+                  file_name: string;
+                  original_name: string;
+                  file_path: string;
+                  file_type: string;
+                  file_size: number;
+                  has_watermark: number;
+                  watermarked_path?: string | null;
+                  upload_time: number;
+                  metadata?: string | null;
+              }
+            | undefined;
         if (!row) return null;
 
-        return {
-            ...row,
+        const res: Attachment = {
+            attachment_id: row.attachment_id,
+            project_item_id: row.project_item_id,
+            file_name: row.file_name,
+            original_name: row.original_name,
+            file_path: row.file_path,
+            file_type: row.file_type,
+            file_size: row.file_size,
+            has_watermark: Boolean(row.has_watermark),
+            watermarked_path: row.watermarked_path || undefined,
+            upload_time: row.upload_time,
             metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
         };
+        return res;
     }
 
     listAttachments(project_item_id: number): Attachment[] {
@@ -111,9 +135,30 @@ export class AttachmentService {
             ORDER BY upload_time ASC
         `);
 
-        const rows = stmt.all(project_item_id) as any[];
+        const rows = stmt.all(project_item_id) as Array<{
+            attachment_id: number;
+            project_item_id: number;
+            file_name: string;
+            original_name: string;
+            file_path: string;
+            file_type: string;
+            file_size: number;
+            has_watermark: number;
+            watermarked_path?: string | null;
+            upload_time: number;
+            metadata?: string | null;
+        }>;
         return rows.map((row) => ({
-            ...row,
+            attachment_id: row.attachment_id,
+            project_item_id: row.project_item_id,
+            file_name: row.file_name,
+            original_name: row.original_name,
+            file_path: row.file_path,
+            file_type: row.file_type,
+            file_size: row.file_size,
+            has_watermark: Boolean(row.has_watermark),
+            watermarked_path: row.watermarked_path || undefined,
+            upload_time: row.upload_time,
             metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
         }));
     }
@@ -192,6 +237,57 @@ export class AttachmentService {
 
     getStoragePath(): string {
         return this.storagePath;
+    }
+
+    // Sanitize base file name (without extension)
+    private sanitizeFileNameBase(name: string): string {
+        const replaced = name
+            .replace(/[\\/:*?"<>|]/g, "_")
+            .replace(/\s+/g, " ")
+            .trim();
+        // Avoid empty names
+        return replaced.length > 0 ? replaced : "file";
+    }
+
+    // Rename attachment file and update DB (preserving extension)
+    renameAttachment(attachment_id: number, newBaseName: string): Attachment | null {
+        const attachment = this.getAttachment(attachment_id);
+        if (!attachment) return null;
+
+        const oldAbsPath = join(this.storagePath, attachment.file_path);
+        const directoryPath = dirname(oldAbsPath);
+
+        const ext = extname(attachment.file_name) || (attachment.file_type ? `.${attachment.file_type}` : "");
+        let base = this.sanitizeFileNameBase(newBaseName);
+        if (base.toLowerCase().endsWith(ext.toLowerCase())) {
+            // If user mistakenly includes extension, strip it to avoid double ext
+            base = base.slice(0, -ext.length);
+        }
+
+        // Ensure unique file name in the same directory
+        let candidate = `${base}${ext}`;
+        let counter = 1;
+        while (existsSync(join(directoryPath, candidate))) {
+            candidate = `${base}-${counter}${ext}`;
+            counter += 1;
+        }
+
+        const newAbsPath = join(directoryPath, candidate);
+        renameSync(oldAbsPath, newAbsPath);
+
+        // Build new relative path from storage root
+        const relativeDirFromStorage = dirname(attachment.file_path); // e.g., <project_id>/items/<item_id>/original
+        const newRelativePath = join(relativeDirFromStorage, candidate);
+
+        // Update DB
+        const stmt = this.db.prepare(`
+            UPDATE attachments
+            SET file_name = ?, original_name = ?, file_path = ?
+            WHERE attachment_id = ?
+        `);
+        stmt.run(candidate, candidate, newRelativePath, attachment_id);
+
+        return this.getAttachment(attachment_id);
     }
 }
 
