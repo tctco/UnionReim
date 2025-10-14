@@ -9,3 +9,4 @@ document.addEventListener("DOMContentLoaded", () => {
         </HashRouter>,
     );
 });
+

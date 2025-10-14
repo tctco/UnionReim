@@ -1,5 +1,6 @@
 import { BrowserWindow, app, ipcMain, nativeTheme, type IpcMainEvent } from "electron";
 import { join } from "path";
+import { registerIpcHandlers } from "./ipc/handlers";
 
 const createBrowserWindow = (): BrowserWindow => {
     const preloadScriptFilePath = join(__dirname, "..", "dist-preload", "index.js");
@@ -8,6 +9,8 @@ const createBrowserWindow = (): BrowserWindow => {
         autoHideMenuBar: true,
         backgroundMaterial: "mica",
         vibrancy: "header",
+        width: 1280,
+        height: 800,
         webPreferences: {
             preload: preloadScriptFilePath,
         },
@@ -42,5 +45,6 @@ const registerNativeThemeEventListeners = (allBrowserWindows: BrowserWindow[]) =
     const mainWindow = createBrowserWindow();
     loadFileOrUrl(mainWindow);
     registerIpcEventListeners();
+    registerIpcHandlers(); // Register all API handlers
     registerNativeThemeEventListeners(BrowserWindow.getAllWindows());
 })();
