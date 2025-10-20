@@ -23,8 +23,9 @@ export function useTemplates() {
             } else {
                 setError(response.error || "Failed to load templates");
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -108,8 +109,9 @@ export function useTemplate(template_id: number | null) {
             } else {
                 setError(response.error || "Failed to load template");
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -118,37 +120,52 @@ export function useTemplate(template_id: number | null) {
     const createItem = useCallback(async (request: CreateTemplateItemRequest) => {
         setError(null);
         const response = await window.ContextBridge.templateItem.create(request);
-        if (response.success && template_id) {
-            await loadTemplate(template_id);
-            return response.data!;
+        if (response.success) {
+            const newItem = response.data!;
+            setTemplate((prev) => {
+                if (!prev) return prev;
+                if (prev.template_id !== newItem.template_id) return prev;
+                return { ...prev, items: [...prev.items, newItem] };
+            });
+            return newItem;
         } else {
             setError(response.error || "Failed to create item");
             throw new Error(response.error);
         }
-    }, [template_id, loadTemplate]);
+    }, []);
 
     const updateItem = useCallback(async (request: UpdateTemplateItemRequest) => {
         setError(null);
         const response = await window.ContextBridge.templateItem.update(request);
-        if (response.success && template_id) {
-            await loadTemplate(template_id);
-            return response.data!;
+        if (response.success) {
+            const updatedItem = response.data!;
+            setTemplate((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    items: prev.items.map((i) => (i.item_id === updatedItem.item_id ? updatedItem : i)),
+                };
+            });
+            return updatedItem;
         } else {
             setError(response.error || "Failed to update item");
             throw new Error(response.error);
         }
-    }, [template_id, loadTemplate]);
+    }, []);
 
     const deleteItem = useCallback(async (item_id: number) => {
         setError(null);
         const response = await window.ContextBridge.templateItem.delete(item_id);
-        if (response.success && template_id) {
-            await loadTemplate(template_id);
+        if (response.success) {
+            setTemplate((prev) => {
+                if (!prev) return prev;
+                return { ...prev, items: prev.items.filter((i) => i.item_id !== item_id) };
+            });
         } else {
             setError(response.error || "Failed to delete item");
             throw new Error(response.error);
         }
-    }, [template_id, loadTemplate]);
+    }, []);
 
     useEffect(() => {
         if (template_id) {

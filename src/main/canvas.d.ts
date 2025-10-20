@@ -22,6 +22,13 @@ declare module 'canvas' {
         textAlign: 'start' | 'end' | 'left' | 'right' | 'center';
         textBaseline: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
         fillText(text: string, x: number, y: number, maxWidth?: number): void;
+        measureText(text: string): { width: number; actualBoundingBoxAscent?: number; actualBoundingBoxDescent?: number };
+        beginPath(): void;
+        moveTo(x: number, y: number): void;
+        lineTo(x: number, y: number): void;
+        lineWidth: number;
+        strokeStyle: string | CanvasGradient | CanvasPattern;
+        stroke(): void;
         save(): void;
         restore(): void;
         translate(x: number, y: number): void;

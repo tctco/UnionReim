@@ -72,11 +72,33 @@ export interface Attachment {
 // Watermark configuration
 export interface WatermarkConfig {
     text: string;
-    position?: 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    // New style: use percentage-based center anchor
+    xPercent?: number; // 0-100, text center X
+    yPercent?: number; // 0-100, text center Y
     fontSize?: number;
     opacity?: number;
     rotation?: number;
     color?: string;
+    fontFamily?: string;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+}
+
+// Watermark UI settings stored in AppSettings
+export interface WatermarkSettings {
+    textMode: 'template' | 'custom';
+    customText?: string; // when textMode = 'custom'
+    fontFamily?: string;
+    fontSize?: number;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    color?: string; // hex #RRGGBB
+    opacity?: number; // 0-1
+    rotation?: number; // degrees
+    xPercent?: number; // 0-100, text center X
+    yPercent?: number; // 0-100, text center Y
 }
 
 // Settings related types
@@ -87,6 +109,7 @@ export interface AppSettings {
     language?: string;
     hoverPreviewWidth?: number;
     hoverPreviewHeight?: number;
+    watermark?: WatermarkSettings;
 }
 
 export interface SettingsUpdateRequest {

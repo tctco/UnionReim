@@ -60,6 +60,62 @@ export function useAttachments() {
         }
     }, []);
 
+    const uploadFromPaths = useCallback(
+        async (
+            project_item_id: number,
+            files: Array<{ path: string; original_name?: string }>,
+        ) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await window.ContextBridge.attachment.uploadFromPaths(project_item_id, files);
+                if (response.success && response.data) {
+                    return response.data as Attachment[];
+                } else {
+                    setError(response.error || "Failed to upload from paths");
+                    throw new Error(response.error);
+                }
+            } catch (err: any) {
+                setError(err.message);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [],
+    );
+
+    const uploadFromData = useCallback(
+        async (
+            project_item_id: number,
+            files: Array<{ data: ArrayBuffer | Uint8Array; name?: string; mime?: string }>,
+        ) => {
+            setLoading(true);
+            setError(null);
+            try {
+                // Normalize to Uint8Array for IPC
+                const payload = files.map((f) => ({
+                    data: f.data instanceof Uint8Array ? Array.from(f.data) : Array.from(new Uint8Array(f.data)),
+                    name: f.name,
+                    mime: f.mime,
+                }));
+                const response = await window.ContextBridge.attachment.uploadFromData(project_item_id, payload);
+                if (response.success && response.data) {
+                    return response.data as Attachment[];
+                } else {
+                    setError(response.error || "Failed to upload from data");
+                    throw new Error(response.error);
+                }
+            } catch (err: any) {
+                setError(err.message);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [],
+    );
+
     const renameAttachment = useCallback(async (attachment_id: number, new_name: string) => {
         setError(null);
         const response = await window.ContextBridge.attachment.rename(attachment_id, new_name);
@@ -99,8 +155,9 @@ export function useAttachments() {
         getAttachmentPath,
         openExternal,
         renameAttachment,
+        uploadFromPaths,
+        uploadFromData,
         applyWatermark,
     };
 }
-
 

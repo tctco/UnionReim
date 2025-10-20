@@ -1,7 +1,7 @@
 import type { Attachment } from "@common/types";
 import type Database from "better-sqlite3";
 import { app } from "electron";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync, writeFileSync } from "fs";
 import { basename, extname, join, dirname } from "path";
 import { DatabaseService } from "../database/Database";
 
@@ -83,6 +83,103 @@ export class AttachmentService {
         updateStmt.run(Date.now(), project_item_id);
 
         return this.getAttachment(Number(result.lastInsertRowid))!;
+    }
+
+    // Upload and store a file from memory buffer (used for clipboard/drag without path)
+    uploadAttachmentFromBuffer(
+        project_item_id: number,
+        data: Buffer,
+        original_name?: string,
+        mime_type?: string,
+    ): Attachment {
+        // Get project_id from project_item
+        const projectItemStmt = this.db.prepare("SELECT project_id FROM project_items WHERE project_item_id = ?");
+        const projectItem = projectItemStmt.get(project_item_id) as { project_id: number } | undefined;
+        if (!projectItem) {
+            throw new Error(`Project item ${project_item_id} not found`);
+        }
+
+        const project_id = projectItem.project_id;
+
+        // Ensure item storage directory exists
+        const itemStoragePath = join(this.storagePath, String(project_id), "items", String(project_item_id), "original");
+        if (!existsSync(itemStoragePath)) {
+            mkdirSync(itemStoragePath, { recursive: true });
+        }
+
+        // Determine base name and extension
+        const nameFallback = original_name && original_name.trim().length > 0 ? original_name : this.nameFromMime(mime_type) || "file";
+        let ext = extname(nameFallback);
+        let baseName = basename(nameFallback, ext);
+        if (!ext) {
+            const extFromMime = this.extFromMime(mime_type);
+            if (extFromMime) {
+                ext = `.${extFromMime}`;
+            }
+        }
+        if (!baseName || baseName.trim().length === 0) baseName = "file";
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const file_name = `${baseName}_${timestamp}${ext || ""}`;
+        const destination_path = join(itemStoragePath, file_name);
+
+        // Write file
+        writeFileSync(destination_path, data);
+
+        // Build metadata
+        const file_size = data.length;
+        const file_type = (ext || "").toLowerCase().replace(".", "");
+        const relative_path = join(String(project_id), "items", String(project_item_id), "original", file_name);
+
+        // Insert into database
+        const stmt = this.db.prepare(`
+            INSERT INTO attachments (
+                project_item_id, file_name, original_name, file_path,
+                file_type, file_size, has_watermark, upload_time
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result = stmt.run(
+            project_item_id,
+            file_name,
+            nameFallback,
+            relative_path,
+            file_type,
+            file_size,
+            0,
+            Date.now(),
+        );
+
+        // Update project_item status if pending
+        const updateStmt = this.db.prepare(`
+            UPDATE project_items
+            SET status = 'uploaded', upload_time = ?
+            WHERE project_item_id = ? AND status = 'pending'
+        `);
+        updateStmt.run(Date.now(), project_item_id);
+
+        return this.getAttachment(Number(result.lastInsertRowid))!;
+    }
+
+    private extFromMime(mime?: string): string | undefined {
+        if (!mime) return undefined;
+        const map: Record<string, string> = {
+            "image/png": "png",
+            "image/jpeg": "jpg",
+            "image/jpg": "jpg",
+            "image/gif": "gif",
+            "application/pdf": "pdf",
+            "application/octet-stream": "bin",
+        };
+        return map[mime];
+    }
+
+    private nameFromMime(mime?: string): string | undefined {
+        if (!mime) return undefined;
+        if (mime.startsWith("image/")) return "image";
+        if (mime === "application/pdf") return "document";
+        return undefined;
     }
 
     getAttachment(attachment_id: number): Attachment | null {

@@ -1,22 +1,23 @@
-import type { WatermarkConfig } from "@common/types";
-import type { Canvas, Image } from "canvas";
+import type { AppSettings, WatermarkConfig } from "@common/types";
 import { createCanvas, loadImage } from "canvas";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, extname, join } from "path";
-import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { AttachmentService } from "./AttachmentService";
 import { ProjectService } from "./ProjectService";
 import { TemplateService } from "./TemplateService";
+import { SettingsService } from "./SettingsService";
 
 export class WatermarkService {
     private attachmentService: AttachmentService;
     private projectService: ProjectService;
     private templateService: TemplateService;
+    private settingsService: SettingsService;
 
     constructor() {
         this.attachmentService = new AttachmentService();
         this.projectService = new ProjectService();
         this.templateService = new TemplateService();
+        this.settingsService = new SettingsService();
     }
 
     // Apply watermark to an attachment
@@ -32,23 +33,43 @@ export class WatermarkService {
             throw new Error("Original file not found");
         }
 
-        // Determine watermark text if not provided
-        let finalWatermarkText = watermark_text;
-        if (!finalWatermarkText) {
-            finalWatermarkText = await this.generateWatermarkText(attachment.project_item_id);
-        }
-
-        // Default configuration
-        const defaultConfig: WatermarkConfig = {
-            text: finalWatermarkText,
-            position: "center",
+        // Merge settings and config
+        const appSettings: AppSettings = this.settingsService.getAppSettings();
+        const wm = appSettings.watermark || {
+            textMode: 'template',
+            fontFamily: 'Arial',
             fontSize: 48,
+            bold: false,
+            color: '#000000',
             opacity: 0.3,
             rotation: -45,
-            color: "#000000",
+            xPercent: 50,
+            yPercent: 50,
         };
 
-        const finalConfig = { ...defaultConfig, ...config, text: finalWatermarkText };
+        // Determine watermark text
+        let finalWatermarkText = watermark_text;
+        if (!finalWatermarkText) {
+            if (wm.textMode === 'custom' && wm.customText && wm.customText.trim()) {
+                finalWatermarkText = wm.customText.trim();
+            } else {
+                finalWatermarkText = await this.generateWatermarkText(attachment.project_item_id);
+            }
+        }
+
+        const defaultConfig: WatermarkConfig = {
+            text: finalWatermarkText,
+            xPercent: wm.xPercent ?? 50,
+            yPercent: wm.yPercent ?? 50,
+            fontSize: wm.fontSize ?? 48,
+            opacity: wm.opacity ?? 0.3,
+            rotation: wm.rotation ?? -45,
+            color: wm.color ?? '#000000',
+            fontFamily: wm.fontFamily ?? 'Arial',
+            bold: wm.bold ?? false,
+        };
+
+        const finalConfig: WatermarkConfig = { ...defaultConfig, ...config, text: finalWatermarkText };
 
         // Process based on file type
         let watermarkedPath: string;
@@ -56,8 +77,6 @@ export class WatermarkService {
 
         if (["jpg", "jpeg", "png"].includes(fileType)) {
             watermarkedPath = await this.applyImageWatermark(originalPath, attachment, finalConfig);
-        } else if (fileType === "pdf") {
-            watermarkedPath = await this.applyPdfWatermark(originalPath, attachment, finalConfig);
         } else {
             throw new Error(`Unsupported file type for watermarking: ${fileType}`);
         }
@@ -96,7 +115,7 @@ export class WatermarkService {
     // Apply watermark to image using canvas
     private async applyImageWatermark(
         originalPath: string,
-        attachment: any,
+        attachment: { file_name: string },
         config: WatermarkConfig,
     ): Promise<string> {
         // Load image from buffer to avoid platform-specific path resolution issues
@@ -109,35 +128,41 @@ export class WatermarkService {
         ctx.drawImage(image, 0, 0);
 
         // Configure watermark text
-        ctx.globalAlpha = config.opacity || 0.3;
-        ctx.fillStyle = config.color || "#000000";
-        ctx.font = `${config.fontSize}px Arial`;
+        const opacity = config.opacity ?? 0.3;
+        const color = config.color ?? "#000000";
+        const fontSize = config.fontSize ?? 48;
+        const fontFamily = config.fontFamily ?? 'Arial';
+        const bold = config.bold ? 'bold ' : '';
+        const xPercent = Math.max(0, Math.min(100, config.xPercent ?? 50));
+        const yPercent = Math.max(0, Math.min(100, config.yPercent ?? 50));
+        const rotation = config.rotation ?? -45;
+
+        const x = (xPercent / 100) * canvas.width;
+        const y = (yPercent / 100) * canvas.height;
+
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = color;
+        const italic = config.italic ? 'italic ' : '';
+        ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // Calculate position
-        let x = canvas.width / 2;
-        let y = canvas.height / 2;
-
-        if (config.position === "top-left") {
-            x = canvas.width * 0.25;
-            y = canvas.height * 0.25;
-        } else if (config.position === "top-right") {
-            x = canvas.width * 0.75;
-            y = canvas.height * 0.25;
-        } else if (config.position === "bottom-left") {
-            x = canvas.width * 0.25;
-            y = canvas.height * 0.75;
-        } else if (config.position === "bottom-right") {
-            x = canvas.width * 0.75;
-            y = canvas.height * 0.75;
-        }
-
-        // Apply rotation
+        // Apply rotation with center anchor
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(((config.rotation || 0) * Math.PI) / 180);
+        ctx.rotate(((rotation || 0) * Math.PI) / 180);
         ctx.fillText(config.text, 0, 0);
+        if (config.underline) {
+            const metrics = ctx.measureText(config.text);
+            const underlineY = (metrics.actualBoundingBoxDescent || 0) * 0.2 + 0; // near baseline
+            const width = metrics.width;
+            ctx.beginPath();
+            ctx.moveTo(-width / 2, underlineY);
+            ctx.lineTo(width / 2, underlineY);
+            ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
         ctx.restore();
 
         // Save watermarked image
@@ -152,7 +177,6 @@ export class WatermarkService {
         if (ext === ".jpg" || ext === ".jpeg") {
             outExt = ".jpg";
             // Encode as JPEG if original was JPEG
-            // @ts-ignore canvas types may not include jpeg in older typings
             outBuffer = canvas.toBuffer("image/jpeg");
         } else {
             outExt = ".png";
@@ -169,68 +193,5 @@ export class WatermarkService {
         return watermarkedPath;
     }
 
-    // Apply watermark to PDF using pdf-lib
-    private async applyPdfWatermark(originalPath: string, attachment: any, config: WatermarkConfig): Promise<string> {
-        const pdfBytes = readFileSync(originalPath);
-        const pdfDoc = await PDFDocument.load(pdfBytes);
-
-        const pages = pdfDoc.getPages();
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-        const fontSize = config.fontSize || 48;
-        const opacity = config.opacity || 0.3;
-        const rotation = config.rotation || -45;
-
-        // Parse color (hex to RGB)
-        const colorHex = config.color || "#000000";
-        const r = parseInt(colorHex.slice(1, 3), 16) / 255;
-        const g = parseInt(colorHex.slice(3, 5), 16) / 255;
-        const b = parseInt(colorHex.slice(5, 7), 16) / 255;
-
-        // Add watermark to each page
-        for (const page of pages) {
-            const { width, height } = page.getSize();
-            const textWidth = font.widthOfTextAtSize(config.text, fontSize);
-
-            // Calculate position
-            let x = width / 2 - textWidth / 2;
-            let y = height / 2;
-
-            if (config.position === "top-left") {
-                x = width * 0.1;
-                y = height * 0.9;
-            } else if (config.position === "top-right") {
-                x = width * 0.9 - textWidth;
-                y = height * 0.9;
-            } else if (config.position === "bottom-left") {
-                x = width * 0.1;
-                y = height * 0.1;
-            } else if (config.position === "bottom-right") {
-                x = width * 0.9 - textWidth;
-                y = height * 0.1;
-            }
-
-            page.drawText(config.text, {
-                x,
-                y,
-                size: fontSize,
-                font,
-                color: rgb(r, g, b),
-                opacity,
-                rotate: degrees(rotation),
-            });
-        }
-
-        // Save watermarked PDF
-        const watermarkedDir = dirname(originalPath).replace("original", "watermarked");
-        if (!existsSync(watermarkedDir)) {
-            mkdirSync(watermarkedDir, { recursive: true });
-        }
-
-        const watermarkedPath = join(watermarkedDir, attachment.file_name.replace(".pdf", "_wm.pdf"));
-        const watermarkedBytes = await pdfDoc.save();
-        writeFileSync(watermarkedPath, watermarkedBytes);
-
-        return watermarkedPath;
-    }
+    // PDF watermarking intentionally not supported in current version.
 }

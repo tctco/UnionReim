@@ -2,7 +2,6 @@ import type {
     CreateProjectRequest,
     CreateTemplateItemRequest,
     CreateTemplateRequest,
-    ImportProjectRequest,
     MultipleTemplateExportRequest,
     SettingsUpdateRequest,
     TemplateExportRequest,
@@ -10,15 +9,17 @@ import type {
     UpdateProjectRequest,
     UpdateTemplateItemRequest,
     UpdateTemplateRequest,
-    UploadAttachmentRequest,
+    Attachment,
 } from "@common/types";
 import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
+import { getFonts } from "font-list";
 import { AttachmentService } from "../services/AttachmentService";
 import { ExportImportService } from "../services/ExportImportService";
 import { ProjectService } from "../services/ProjectService";
 import { SettingsService } from "../services/SettingsService";
 import { TemplateService } from "../services/TemplateService";
 import { WatermarkService } from "../services/WatermarkService";
+import { basename } from "path";
 
 export function registerIpcHandlers(): void {
     const settingsService = new SettingsService();
@@ -35,6 +36,17 @@ export function registerIpcHandlers(): void {
             return { success: true, data: settings };
         } catch (error: any) {
             return { success: false, error: error.message };
+        }
+    });
+
+    // Fonts handlers
+    ipcMain.handle("fonts:list", async () => {
+        try {
+            const fonts = await getFonts({ disableQuoting: true });
+            return { success: true, data: fonts };
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return { success: false, error: message };
         }
     });
 
@@ -406,17 +418,64 @@ export function registerIpcHandlers(): void {
         },
     );
 
-    ipcMain.handle("attachment:rename", async (event: IpcMainInvokeEvent, attachment_id: number, new_name: string) => {
+    ipcMain.handle("attachment:rename", async (_event: IpcMainInvokeEvent, attachment_id: number, new_name: string) => {
         try {
             const updated = attachmentService.renameAttachment(attachment_id, new_name);
             if (!updated) {
                 return { success: false, error: "Attachment not found" };
             }
             return { success: true, data: updated };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            return { success: false, error: message };
         }
     });
+
+    ipcMain.handle(
+        "attachment:uploadFromPaths",
+        async (
+            _event: IpcMainInvokeEvent,
+            project_item_id: number,
+            files: Array<{ path: string; original_name?: string }>,
+        ) => {
+            try {
+                const attachments: Attachment[] = [];
+                for (const f of files || []) {
+                    const filePath = f.path;
+                    const nameFromPath = basename(filePath) || "file";
+                    const originalName = f.original_name || nameFromPath;
+                    const a = attachmentService.uploadAttachment(project_item_id, filePath, originalName);
+                    attachments.push(a);
+                }
+                return { success: true, data: attachments };
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                return { success: false, error: message };
+            }
+        },
+    );
+
+    ipcMain.handle(
+        "attachment:uploadFromData",
+        async (
+            _event: IpcMainInvokeEvent,
+            project_item_id: number,
+            files: Array<{ data: Uint8Array | number[]; name?: string; mime?: string }>,
+        ) => {
+            try {
+                const attachments: Attachment[] = [];
+                for (const f of files || []) {
+                    const bytes = Array.isArray(f.data) ? Buffer.from(f.data) : Buffer.from(f.data as Uint8Array);
+                    const a = attachmentService.uploadAttachmentFromBuffer(project_item_id, bytes, f.name, f.mime);
+                    attachments.push(a);
+                }
+                return { success: true, data: attachments };
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : String(error);
+                return { success: false, error: message };
+            }
+        },
+    );
 
     ipcMain.handle("attachment:openExternal", async (event: IpcMainInvokeEvent, attachment_id: number) => {
         try {
@@ -488,4 +547,3 @@ export function registerIpcHandlers(): void {
         }
     });
 }
-

@@ -1,14 +1,6 @@
 import type Database from "better-sqlite3";
 import { DatabaseService } from "../database/Database";
-
-export interface AppSettings {
-    defaultUserName?: string;
-    theme?: 'light' | 'dark' | 'system';
-    defaultStoragePath?: string;
-    language?: string;
-    hoverPreviewWidth?: number;
-    hoverPreviewHeight?: number;
-}
+import type { AppSettings, WatermarkSettings } from "@common/types";
 
 export class SettingsService {
     private db: Database.Database;
@@ -25,10 +17,28 @@ export class SettingsService {
             language: 'zh-CN',
             hoverPreviewWidth: 400,
             hoverPreviewHeight: 400,
+            watermark: {
+                textMode: 'template',
+                fontFamily: 'Arial',
+                fontSize: 48,
+                bold: false,
+                italic: false,
+                underline: false,
+                color: '#000000',
+                opacity: 0.3,
+                rotation: -45,
+                xPercent: 50,
+                yPercent: 50,
+            },
         };
 
         for (const [key, value] of Object.entries(defaults)) {
-            if (value !== undefined && !this.getSetting(key)) {
+            if (value === undefined) continue;
+            const exists = this.getSetting(key);
+            if (exists) continue;
+            if (key === 'watermark') {
+                this.setSetting(key, JSON.stringify(value));
+            } else {
                 this.setSetting(key, String(value));
             }
         }
@@ -100,7 +110,16 @@ export class SettingsService {
 
     getAppSettings(): AppSettings {
         const allSettings = this.getAllSettings();
-        
+        let watermark: WatermarkSettings | undefined;
+        const wmRaw = allSettings.watermark;
+        if (wmRaw) {
+            try {
+                watermark = JSON.parse(wmRaw) as WatermarkSettings;
+            } catch {
+                watermark = undefined;
+            }
+        }
+
         return {
             defaultUserName: allSettings.defaultUserName || undefined,
             theme: (allSettings.theme as 'light' | 'dark' | 'system') || 'system',
@@ -108,12 +127,16 @@ export class SettingsService {
             language: allSettings.language || 'zh-CN',
             hoverPreviewWidth: allSettings.hoverPreviewWidth ? Number(allSettings.hoverPreviewWidth) : 400,
             hoverPreviewHeight: allSettings.hoverPreviewHeight ? Number(allSettings.hoverPreviewHeight) : 400,
+            watermark: watermark,
         };
     }
 
     updateAppSettings(settings: Partial<AppSettings>): void {
         for (const [key, value] of Object.entries(settings)) {
-            if (value !== undefined) {
+            if (value === undefined) continue;
+            if (key === 'watermark') {
+                this.setSetting(key, JSON.stringify(value));
+            } else {
                 this.setSetting(key, String(value));
             }
         }

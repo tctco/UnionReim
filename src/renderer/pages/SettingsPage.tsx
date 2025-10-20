@@ -1,12 +1,9 @@
 import {
     Button,
-    Card,
-    CardHeader,
-    Checkbox,
-    Field,
-    Input,
-    Label,
-    Switch,
+    Accordion,
+    AccordionItem,
+    AccordionHeader,
+    AccordionPanel,
     makeStyles,
     tokens,
     Toaster,
@@ -17,9 +14,15 @@ import {
     DarkTheme24Regular,
     Settings24Regular,
 } from "@fluentui/react-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSaveHandler } from "../utils/toastHelpers";
-import type { AppSettings } from "@common/types";
+import type { AppSettings, WatermarkSettings } from "@common/types";
+import WatermarkSettingsPanel from "../components/Settings/WatermarkSettingsPanel";
+import UserSettingsPanel from "../components/Settings/UserSettingsPanel";
+import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPanel";
+import FileSettingsPanel from "../components/Settings/FileSettingsPanel";
+import PreviewSettingsPanel from "../components/Settings/PreviewSettingsPanel";
+// (local hsv type is defined inside ColorPickerPopover)
 
 const useStyles = makeStyles({
     container: {
@@ -43,17 +46,6 @@ const useStyles = makeStyles({
         gap: "24px",
         gridTemplateColumns: "1fr",
     },
-    card: {
-        padding: "24px",
-    },
-    cardTitle: {
-        fontSize: tokens.fontSizeBase500,
-        fontWeight: tokens.fontWeightSemibold,
-        marginBottom: "16px",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-    },
     field: {
         marginBottom: "16px",
     },
@@ -73,6 +65,40 @@ const useStyles = makeStyles({
         paddingTop: "24px",
         borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
     },
+    wmGrid: {
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        gap: "16px",
+    },
+    wmControls: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "12px 16px",
+    },
+    toolbar: {
+        display: "flex",
+        columnGap: "4px",
+        alignItems: "center",
+    },
+    wmControlFull: {
+        gridColumn: "1 / -1",
+    },
+    wmPreviewWrap: {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: tokens.colorNeutralBackground3,
+        borderRadius: tokens.borderRadiusMedium,
+        padding: "8px",
+    },
+    wmCanvas: {
+        width: "100%",
+        maxWidth: "480px",
+        height: "auto",
+        borderRadius: tokens.borderRadiusSmall,
+        border: `1px solid ${tokens.colorNeutralStroke1}`,
+        display: "block",
+    },
 });
 
 export function SettingsPage() {
@@ -82,6 +108,10 @@ export function SettingsPage() {
     const [saving, setSaving] = useState(false);
 
     const [formData, setFormData] = useState<AppSettings>({});
+    const [fonts, setFonts] = useState<string[]>([]);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    // local states not needed after splitting panels
+    // color popover handled by ColorPickerPopover component
 
     // 使用toast处理器
     const saveWithToast = useSaveHandler({
@@ -139,6 +169,94 @@ export function SettingsPage() {
         }
     };
 
+    const loadFonts = async () => {
+        try {
+            const res = await window.ContextBridge.fonts.list();
+            if (res.success && Array.isArray(res.data)) {
+                setFonts(res.data);
+            }
+        } catch {
+            // ignore font load errors silently
+        }
+    };
+
+    useEffect(() => {
+        loadFonts();
+    }, []);
+
+    const getDefaultWatermark = (): WatermarkSettings => ({
+        textMode: "template",
+        fontFamily: "Arial",
+        fontSize: 48,
+        bold: false,
+        color: "#000000",
+        opacity: 0.3,
+        rotation: -45,
+        xPercent: 50,
+        yPercent: 50,
+    });
+
+    const wm: WatermarkSettings = { ...getDefaultWatermark(), ...(formData.watermark || {}) };
+
+    const updateWatermark = (patch: Partial<WatermarkSettings>) => {
+        setFormData({ ...formData, watermark: { ...wm, ...patch } });
+    };
+
+    // color helpers are encapsulated in ColorPickerPopover
+    // hsvToHexAlpha now inside ColorPickerPopover
+
+    // no local preview color state; handled inside ColorPickerPopover
+
+    // Draw patterned preview with current watermark config
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const width = 480;
+        const height = 320;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        // background pattern (light grid)
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "#f7f7f7";
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = "#e0e0e0";
+        ctx.lineWidth = 1;
+        for (let x = 0; x < width; x += 24) {
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, 0);
+            ctx.lineTo(x + 0.5, height);
+            ctx.stroke();
+        }
+        for (let y = 0; y < height; y += 24) {
+            ctx.beginPath();
+            ctx.moveTo(0, y + 0.5);
+            ctx.lineTo(width, y + 0.5);
+            ctx.stroke();
+        }
+
+        // watermark text (center-anchored with rotation)
+        const text = "Watermark Preview";
+        const x = (Math.max(0, Math.min(100, wm.xPercent ?? 50)) / 100) * width;
+        const y = (Math.max(0, Math.min(100, wm.yPercent ?? 50)) / 100) * height;
+        const fontSize = wm.fontSize ?? 48;
+        const fontFamily = wm.fontFamily || "Arial";
+        const fontWeight = wm.bold ? "bold " : "";
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(((wm.rotation ?? -45) * Math.PI) / 180);
+        ctx.globalAlpha = wm.opacity ?? 0.3;
+        ctx.fillStyle = wm.color || "#000000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = `${fontWeight}${fontSize}px ${fontFamily}`;
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+    }, [wm.fontFamily, wm.fontSize, wm.bold, wm.color, wm.opacity, wm.rotation, wm.xPercent, wm.yPercent]);
+
     const hasChanges = JSON.stringify(formData) !== JSON.stringify(settings);
 
     if (loading) {
@@ -158,142 +276,66 @@ export function SettingsPage() {
                 <h1 className={styles.title}>应用设置</h1>
             </div>
 
-            <div className={styles.settingsGrid}>
-                {/* 用户设置 */}
-                <Card className={styles.card}>
-                    <CardHeader>
-                        <div className={styles.cardTitle}>
-                            <Person24Regular />
-                            用户设置
-                        </div>
-                    </CardHeader>
+            <Accordion multiple collapsible defaultOpenItems={["wm", "user", "appearance", "files", "preview"]}>
+                <AccordionItem value="wm">
+                    <AccordionHeader>
+                        <Settings24Regular />&nbsp;Watermark
+                    </AccordionHeader>
+                    <AccordionPanel>
+                        <WatermarkSettingsPanel wm={wm} fonts={fonts} onChange={updateWatermark} />
+                    </AccordionPanel>
+                </AccordionItem>
                     
-                    <Field className={styles.field}>
-                        <Label htmlFor="defaultUserName">默认用户名</Label>
-                        <Input
-                            id="defaultUserName"
-                            value={formData.defaultUserName || ""}
-                            onChange={(_, data) => 
-                                setFormData({ ...formData, defaultUserName: data.value })
-                            }
-                            placeholder="输入默认用户名"
-                        />
-                    </Field>
-                </Card>
+                <AccordionItem value="user">
+                    <AccordionHeader>
+                        <Person24Regular />&nbsp;用户设置
+                    </AccordionHeader>
+                    <AccordionPanel>
+                    <UserSettingsPanel
+                        defaultUserName={formData.defaultUserName}
+                        onChange={(name) => setFormData({ ...formData, defaultUserName: name })}
+                    />
+                    </AccordionPanel>
+                </AccordionItem>
 
-                {/* 外观设置 */}
-                <Card className={styles.card}>
-                    <CardHeader>
-                        <div className={styles.cardTitle}>
-                            <DarkTheme24Regular />
-                            外观设置
-                        </div>
-                    </CardHeader>
-                    
-                    <Field className={styles.field}>
-                        <Label>主题设置</Label>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                            <Checkbox
-                                checked={formData.theme === "system"}
-                                onChange={(_, data) => {
-                                    if (data.checked) {
-                                        setFormData({ ...formData, theme: "system" });
-                                    } else {
-                                        setFormData({ ...formData, theme: "light" });
-                                    }
-                                }}
-                                label="跟随系统主题"
-                            />
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <DarkTheme24Regular />
-                                <Label>深色模式</Label>
-                                <Switch
-                                    checked={formData.theme === "dark"}
-                                    disabled={formData.theme === "system"}
-                                    onChange={(_, data) => {
-                                        if (formData.theme !== "system") {
-                                            setFormData({ 
-                                                ...formData, 
-                                                theme: data.checked ? "dark" : "light" 
-                                            });
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </Field>
-                </Card>
+                <AccordionItem value="appearance">
+                    <AccordionHeader>
+                        <DarkTheme24Regular />&nbsp;外观设置
+                    </AccordionHeader>
+                    <AccordionPanel>
+                    <AppearanceSettingsPanel
+                        theme={formData.theme as 'light'|'dark'|'system' | undefined}
+                        onChange={(t) => setFormData({ ...formData, theme: t })}
+                    />
+                    </AccordionPanel>
+                </AccordionItem>
 
-                {/* 文件设置 */}
-                <Card className={styles.card}>
-                    <CardHeader>
-                        <div className={styles.cardTitle}>
-                            <Folder24Regular />
-                            文件设置
-                        </div>
-                    </CardHeader>
-                    
-                    <Field className={styles.field}>
-                        <Label htmlFor="defaultStoragePath">默认存储路径</Label>
-                        <div className={styles.pathField}>
-                            <Input
-                                id="defaultStoragePath"
-                                className={styles.pathInput}
-                                value={formData.defaultStoragePath || ""}
-                                onChange={(_, data) => 
-                                    setFormData({ ...formData, defaultStoragePath: data.value })
-                                }
-                                placeholder="输入默认文件存储路径"
-                            />
-                            <Button 
-                                appearance="outline" 
-                                onClick={selectDefaultStoragePath}
-                                icon={<Folder24Regular />}
-                            >
-                                浏览
-                            </Button>
-                        </div>
-                    </Field>
-                </Card>
+                <AccordionItem value="files">
+                    <AccordionHeader>
+                        <Folder24Regular />&nbsp;文件设置
+                    </AccordionHeader>
+                    <AccordionPanel>
+                    <FileSettingsPanel
+                        defaultStoragePath={formData.defaultStoragePath}
+                        onChange={(p) => setFormData({ ...formData, defaultStoragePath: p })}
+                        onBrowse={selectDefaultStoragePath}
+                    />
+                    </AccordionPanel>
+                </AccordionItem>
 
-                {/* 预览设置 */}
-                <Card className={styles.card}>
-                    <CardHeader>
-                        <div className={styles.cardTitle}>
-                            <Settings24Regular />
-                            预览设置
-                        </div>
-                    </CardHeader>
-
-                    <Field className={styles.field}>
-                        <Label htmlFor="hoverPreviewWidth">预览宽度（px）</Label>
-                        <Input
-                            id="hoverPreviewWidth"
-                            type="number"
-                            value={String(formData.hoverPreviewWidth ?? 400)}
-                            onChange={(_, data) =>
-                                setFormData({ ...formData, hoverPreviewWidth: Number(data.value || 0) })
-                            }
-                            min={120}
-                            step={10}
-                        />
-                    </Field>
-
-                    <Field className={styles.field}>
-                        <Label htmlFor="hoverPreviewHeight">预览高度（px）</Label>
-                        <Input
-                            id="hoverPreviewHeight"
-                            type="number"
-                            value={String(formData.hoverPreviewHeight ?? 240)}
-                            onChange={(_, data) =>
-                                setFormData({ ...formData, hoverPreviewHeight: Number(data.value || 0) })
-                            }
-                            min={80}
-                            step={10}
-                        />
-                    </Field>
-                </Card>
-            </div>
+                <AccordionItem value="preview">
+                    <AccordionHeader>
+                        <Settings24Regular />&nbsp;预览设置
+                    </AccordionHeader>
+                    <AccordionPanel>
+                    <PreviewSettingsPanel
+                        width={formData.hoverPreviewWidth}
+                        height={formData.hoverPreviewHeight}
+                        onChange={(p) => setFormData({ ...formData, hoverPreviewWidth: p.width ?? formData.hoverPreviewWidth, hoverPreviewHeight: p.height ?? formData.hoverPreviewHeight })}
+                    />
+                    </AccordionPanel>
+                </AccordionItem>
+            </Accordion>
 
             {/* 操作按钮 */}
             <div className={styles.actionButtons}>

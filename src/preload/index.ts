@@ -61,10 +61,17 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         getPath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getPath", attachment_id, use_watermarked),
         openExternal: (attachment_id) => ipcRenderer.invoke("attachment:openExternal", attachment_id),
         rename: (attachment_id, new_name) => ipcRenderer.invoke("attachment:rename", attachment_id, new_name),
+        uploadFromPaths: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromPaths", project_item_id, files),
+        uploadFromData: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromData", project_item_id, files),
     },
 
     // Watermark operations
     watermark: {
         apply: (attachment_id) => ipcRenderer.invoke("watermark:apply", attachment_id),
+    },
+
+    // Fonts operations
+    fonts: {
+        list: () => ipcRenderer.invoke('fonts:list'),
     },
 });
