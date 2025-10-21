@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { makeStyles, tokens } from "@fluentui/react-components";
+import { ALLOWED_ATTACHMENT_EXTS } from "@common/constants";
 import { Attach24Regular } from "@fluentui/react-icons";
 
 type UploadCandidate = { path: string; original_name?: string };
@@ -42,7 +43,7 @@ export interface FileUploaderProps {
 }
 
 export function FileUploader(props: FileUploaderProps) {
-    const { onUpload, onUploadData, acceptExts = ["png", "jpg", "jpeg", "pdf", "ofd"], children } = props;
+    const { onUpload, onUploadData, acceptExts = [...ALLOWED_ATTACHMENT_EXTS], children } = props;
     const styles = useStyles();
     const [isDragging, setIsDragging] = useState(false);
     const dragCounterRef = useRef(0);

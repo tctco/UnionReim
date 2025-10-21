@@ -1,63 +1,39 @@
 import type { Attachment } from "@common/types";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { callIpc, useAsyncTask } from "./useAsync";
+/**
+ * Hooks for Attachment operations with consistent error handling.
+ */
 
 export function useAttachments() {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { loading, error, run, reset } = useAsyncTask();
 
     const uploadAttachment = useCallback(async (project_item_id: number) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await window.ContextBridge.attachment.upload(project_item_id);
-            if (response.success && response.data) {
-                return response.data;
-            } else {
-                setError(response.error || "Failed to upload attachment");
-                throw new Error(response.error);
-            }
-        } catch (err: any) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
+        return await run(async () => {
+            const data = await callIpc(() => window.ContextBridge.attachment.upload(project_item_id), "Failed to upload attachment");
+            return data as Attachment[];
+        });
     }, []);
 
     const listAttachments = useCallback(async (project_item_id: number) => {
-        const response = await window.ContextBridge.attachment.list(project_item_id);
-        if (response.success && response.data) {
-            return response.data;
-        }
-        return [];
+        const data = await callIpc(() => window.ContextBridge.attachment.list(project_item_id), "Failed to list attachments");
+        return data || [];
     }, []);
 
     const deleteAttachment = useCallback(async (attachment_id: number) => {
-        setError(null);
-        const response = await window.ContextBridge.attachment.delete(attachment_id);
-        if (response.success) {
-            return true;
-        } else {
-            setError(response.error || "Failed to delete attachment");
-            throw new Error(response.error);
-        }
+        reset();
+        await callIpc(() => window.ContextBridge.attachment.delete(attachment_id), "Failed to delete attachment");
+        return true;
     }, []);
 
     const getAttachmentPath = useCallback(async (attachment_id: number, use_watermarked: boolean = false) => {
-        const response = await window.ContextBridge.attachment.getPath(attachment_id, use_watermarked);
-        if (response.success && response.data) {
-            return response.data;
-        }
-        return null;
+        const data = await callIpc(() => window.ContextBridge.attachment.getPath(attachment_id, use_watermarked), "Failed to get attachment path");
+        return data || null;
     }, []);
 
     const openExternal = useCallback(async (attachment_id: number) => {
-        setError(null);
-        const response = await window.ContextBridge.attachment.openExternal(attachment_id);
-        if (!response.success) {
-            setError(response.error || "Failed to open file");
-            throw new Error(response.error);
-        }
+        reset();
+        await callIpc(() => window.ContextBridge.attachment.openExternal(attachment_id), "Failed to open file");
     }, []);
 
     const uploadFromPaths = useCallback(
@@ -65,22 +41,10 @@ export function useAttachments() {
             project_item_id: number,
             files: Array<{ path: string; original_name?: string }>,
         ) => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await window.ContextBridge.attachment.uploadFromPaths(project_item_id, files);
-                if (response.success && response.data) {
-                    return response.data as Attachment[];
-                } else {
-                    setError(response.error || "Failed to upload from paths");
-                    throw new Error(response.error);
-                }
-            } catch (err: any) {
-                setError(err.message);
-                throw err;
-            } finally {
-                setLoading(false);
-            }
+            return await run(async () => {
+                const data = await callIpc(() => window.ContextBridge.attachment.uploadFromPaths(project_item_id, files), "Failed to upload from paths");
+                return data as Attachment[];
+            });
         },
         [],
     );
@@ -90,60 +54,30 @@ export function useAttachments() {
             project_item_id: number,
             files: Array<{ data: ArrayBuffer | Uint8Array; name?: string; mime?: string }>,
         ) => {
-            setLoading(true);
-            setError(null);
-            try {
-                // Normalize to Uint8Array for IPC
-                const payload = files.map((f) => ({
-                    data: f.data instanceof Uint8Array ? Array.from(f.data) : Array.from(new Uint8Array(f.data)),
-                    name: f.name,
-                    mime: f.mime,
-                }));
-                const response = await window.ContextBridge.attachment.uploadFromData(project_item_id, payload);
-                if (response.success && response.data) {
-                    return response.data as Attachment[];
-                } else {
-                    setError(response.error || "Failed to upload from data");
-                    throw new Error(response.error);
-                }
-            } catch (err: any) {
-                setError(err.message);
-                throw err;
-            } finally {
-                setLoading(false);
-            }
+            // Normalize to Uint8Array for IPC
+            const payload = files.map((f) => ({
+                data: f.data instanceof Uint8Array ? Array.from(f.data) : Array.from(new Uint8Array(f.data)),
+                name: f.name,
+                mime: f.mime,
+            }));
+            return await run(async () => {
+                const data = await callIpc(() => window.ContextBridge.attachment.uploadFromData(project_item_id, payload), "Failed to upload from data");
+                return data as Attachment[];
+            });
         },
         [],
     );
 
     const renameAttachment = useCallback(async (attachment_id: number, new_name: string) => {
-        setError(null);
-        const response = await window.ContextBridge.attachment.rename(attachment_id, new_name);
-        if (response.success && response.data) {
-            return response.data as Attachment;
-        } else {
-            setError(response.error || "Failed to rename attachment");
-            throw new Error(response.error);
-        }
+        reset();
+        return await callIpc(() => window.ContextBridge.attachment.rename(attachment_id, new_name), "Failed to rename attachment");
     }, []);
 
     const applyWatermark = useCallback(async (attachment_id: number) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await window.ContextBridge.watermark.apply(attachment_id);
-            if (response.success && response.data) {
-                return response.data;
-            } else {
-                setError(response.error || "Failed to apply watermark");
-                throw new Error(response.error);
-            }
-        } catch (err: any) {
-            setError(err.message);
-            throw err;
-        } finally {
-            setLoading(false);
-        }
+        return await run(async () => {
+            const data = await callIpc(() => window.ContextBridge.watermark.apply(attachment_id), "Failed to apply watermark");
+            return data as string;
+        });
     }, []);
 
     return {
@@ -160,4 +94,3 @@ export function useAttachments() {
         applyWatermark,
     };
 }
-

@@ -12,6 +12,8 @@ import type {
     Attachment,
 } from "@common/types";
 import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
+import { respond } from "./ipcUtils";
+import { ALLOWED_ATTACHMENT_EXTS } from "@common/constants";
 import { getFonts } from "font-list";
 import { AttachmentService } from "../services/AttachmentService";
 import { ExportImportService } from "../services/ExportImportService";
@@ -30,475 +32,235 @@ export function registerIpcHandlers(): void {
     const exportImportService = new ExportImportService();
 
     // Settings handlers
-    ipcMain.handle("settings:get", async (event: IpcMainInvokeEvent) => {
-        try {
-            const settings = settingsService.getAppSettings();
-            return { success: true, data: settings };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("settings:get", respond(() => settingsService.getAppSettings()));
 
     // Fonts handlers
-    ipcMain.handle("fonts:list", async () => {
-        try {
-            const fonts = await getFonts({ disableQuoting: true });
-            return { success: true, data: fonts };
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            return { success: false, error: message };
-        }
-    });
+    ipcMain.handle("fonts:list", respond(async () => {
+        const fonts = await getFonts({ disableQuoting: true });
+        return fonts;
+    }));
 
-    ipcMain.handle("settings:update", async (event: IpcMainInvokeEvent, request: SettingsUpdateRequest) => {
-        try {
-            settingsService.updateAppSettings(request.settings);
-            const updatedSettings = settingsService.getAppSettings();
-            // Broadcast settings change to all renderer windows
-            for (const win of BrowserWindow.getAllWindows()) {
-                win.webContents.send("settings:changed", updatedSettings);
-            }
-            return { success: true, data: updatedSettings };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("settings:update", respond((request: SettingsUpdateRequest) => {
+        settingsService.updateAppSettings(request.settings);
+        const updatedSettings = settingsService.getAppSettings();
+        // Broadcast settings change to all renderer windows
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send("settings:changed", updatedSettings);
         }
-    });
+        return updatedSettings;
+    }));
 
-    ipcMain.handle("settings:getSetting", async (event: IpcMainInvokeEvent, key: string) => {
-        try {
-            const value = settingsService.getSetting(key);
-            return { success: true, data: value };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("settings:getSetting", respond((key: string) => settingsService.getSetting(key)));
 
-    ipcMain.handle("settings:setSetting", async (event: IpcMainInvokeEvent, key: string, value: string) => {
-        try {
-            settingsService.setSetting(key, value);
-            const updatedSettings = settingsService.getAppSettings();
-            for (const win of BrowserWindow.getAllWindows()) {
-                win.webContents.send("settings:changed", updatedSettings);
-            }
-            return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("settings:setSetting", respond((key: string, value: string) => {
+        settingsService.setSetting(key, value);
+        const updatedSettings = settingsService.getAppSettings();
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send("settings:changed", updatedSettings);
         }
-    });
+        return true;
+    }, { successFromBoolean: true }));
 
     // Template handlers
-    ipcMain.handle("template:create", async (event: IpcMainInvokeEvent, request: CreateTemplateRequest) => {
-        try {
-            return { success: true, data: templateService.createTemplate(request) };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("template:create", respond((request: CreateTemplateRequest) => templateService.createTemplate(request)));
+
+    ipcMain.handle("template:list", respond((filter?: { search?: string }) => templateService.listTemplates(filter)));
+
+    ipcMain.handle("template:get", respond((template_id: number) => {
+        const template = templateService.getTemplateWithItems(template_id);
+        if (!template) {
+            throw new Error("Template not found");
         }
-    });
+        return template;
+    }));
 
-    ipcMain.handle("template:list", async (event: IpcMainInvokeEvent, filter?: { search?: string }) => {
-        try {
-            return { success: true, data: templateService.listTemplates(filter) };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("template:update", respond((request: UpdateTemplateRequest) => {
+        const template = templateService.updateTemplate(request);
+        if (!template) throw new Error("Template not found");
+        return template;
+    }));
+
+    ipcMain.handle("template:delete", respond((template_id: number) => templateService.deleteTemplate(template_id), { successFromBoolean: true }));
+
+    ipcMain.handle("template:safeDelete", respond((template_id: number) => templateService.safeDeleteTemplate(template_id)));
+
+    ipcMain.handle("template:checkModification", respond((template_id: number, critical_changes?: boolean) => templateService.canModifyTemplateItem(template_id, critical_changes)));
+
+    ipcMain.handle("template:getAssociatedProjects", respond((template_id: number) => templateService.getAssociatedProjects(template_id)));
+
+    ipcMain.handle("template:export", respond(async (request: TemplateExportRequest) => {
+        // Get template details for generating default filename
+        const template = templateService.getTemplate(request.template_id);
+        let defaultFileName = `template_${request.template_id}.json`;
+        if (template) {
+            const templateName = template.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
+            defaultFileName = `template_${templateName}.json`;
         }
-    });
-
-    ipcMain.handle("template:get", async (event: IpcMainInvokeEvent, template_id: number) => {
-        try {
-            const template = templateService.getTemplateWithItems(template_id);
-            if (!template) {
-                return { success: false, error: "Template not found" };
-            }
-            return { success: true, data: template };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        const result = await dialog.showSaveDialog({
+            defaultPath: defaultFileName,
+            filters: [{ name: "JSON Files", extensions: ["json"] }],
+        });
+        if (result.canceled || !result.filePath) {
+            throw new Error("Export canceled");
         }
-    });
+        const exportPath = await exportImportService.exportTemplate(request.template_id, result.filePath);
+        return exportPath;
+    }));
 
-    ipcMain.handle("template:update", async (event: IpcMainInvokeEvent, request: UpdateTemplateRequest) => {
-        try {
-            const template = templateService.updateTemplate(request);
-            if (!template) {
-                return { success: false, error: "Template not found" };
-            }
-            return { success: true, data: template };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("template:import", respond(async (_request: TemplateImportRequest) => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openFile"],
+            filters: [{ name: "JSON Files", extensions: ["json"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            throw new Error("Import canceled");
         }
-    });
+        const template_id = await exportImportService.importTemplate(result.filePaths[0]);
+        return template_id;
+    }));
 
-    ipcMain.handle("template:delete", async (event: IpcMainInvokeEvent, template_id: number) => {
-        try {
-            const result = templateService.deleteTemplate(template_id);
-            return { success: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("template:exportMultiple", respond(async (request: MultipleTemplateExportRequest) => {
+        const result = await dialog.showSaveDialog({
+            defaultPath: `templates_batch_${Date.now()}.zip`,
+            filters: [{ name: "ZIP Files", extensions: ["zip"] }],
+        });
+        if (result.canceled || !result.filePath) {
+            throw new Error("Export canceled");
         }
-    });
+        const exportPath = await exportImportService.exportMultipleTemplates(request.template_ids, result.filePath);
+        return exportPath;
+    }));
 
-    ipcMain.handle("template:safeDelete", async (event: IpcMainInvokeEvent, template_id: number) => {
-        try {
-            const result = templateService.safeDeleteTemplate(template_id);
-            return { success: true, data: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("template:importFromZip", respond(async (_zip_path: string) => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openFile"],
+            filters: [{ name: "ZIP Files", extensions: ["zip"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            throw new Error("Import canceled");
         }
-    });
+        const template_ids = await exportImportService.importTemplatesFromZip(result.filePaths[0]);
+        return template_ids;
+    }));
 
-    ipcMain.handle("template:checkModification", async (event: IpcMainInvokeEvent, template_id: number, critical_changes?: boolean) => {
-        try {
-            const result = templateService.canModifyTemplateItem(template_id, critical_changes);
-            return { success: true, data: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:getAssociatedProjects", async (event: IpcMainInvokeEvent, template_id: number) => {
-        try {
-            const projects = templateService.getAssociatedProjects(template_id);
-            return { success: true, data: projects };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:export", async (event: IpcMainInvokeEvent, request: TemplateExportRequest) => {
-        try {
-            // Get template details for generating default filename
-            const template = templateService.getTemplate(request.template_id);
-            let defaultFileName = `template_${request.template_id}.json`;
-            
-            if (template) {
-                const templateName = template.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
-                defaultFileName = `template_${templateName}.json`;
-            }
-            const result = await dialog.showSaveDialog({
-                
-                defaultPath: defaultFileName,
-                filters: [{ name: "JSON Files", extensions: ["json"] }],
-            });
-
-            if (result.canceled || !result.filePath) {
-                return { success: false, error: "Export canceled" };
-            }
-
-            const exportPath = await exportImportService.exportTemplate(request.template_id, result.filePath);
-            return { success: true, data: exportPath };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:import", async (event: IpcMainInvokeEvent, request: TemplateImportRequest) => {
-        try {
-            const result = await dialog.showOpenDialog({
-                properties: ["openFile"],
-                filters: [{ name: "JSON Files", extensions: ["json"] }],
-            });
-
-            if (result.canceled || result.filePaths.length === 0) {
-                return { success: false, error: "Import canceled" };
-            }
-
-            const template_id = await exportImportService.importTemplate(result.filePaths[0]);
-            return { success: true, data: template_id };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:exportMultiple", async (event: IpcMainInvokeEvent, request: MultipleTemplateExportRequest) => {
-        try {
-            const result = await dialog.showSaveDialog({
-                defaultPath: `templates_batch_${Date.now()}.zip`,
-                filters: [{ name: "ZIP Files", extensions: ["zip"] }],
-            });
-
-            if (result.canceled || !result.filePath) {
-                return { success: false, error: "Export canceled" };
-            }
-
-            const exportPath = await exportImportService.exportMultipleTemplates(request.template_ids, result.filePath);
-            return { success: true, data: exportPath };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:importFromZip", async (event: IpcMainInvokeEvent, zip_path: string) => {
-        try {
-            const result = await dialog.showOpenDialog({
-                properties: ["openFile"],
-                filters: [{ name: "ZIP Files", extensions: ["zip"] }],
-            });
-
-            if (result.canceled || result.filePaths.length === 0) {
-                return { success: false, error: "Import canceled" };
-            }
-
-            const template_ids = await exportImportService.importTemplatesFromZip(result.filePaths[0]);
-            return { success: true, data: template_ids };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
-
-    ipcMain.handle("template:clone", async (event: IpcMainInvokeEvent, template_id: number, new_name: string) => {
-        try {
-            const template = templateService.cloneTemplate(template_id, new_name);
-            if (!template) {
-                return { success: false, error: "Failed to clone template" };
-            }
-            return { success: true, data: template };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("template:clone", respond((template_id: number, new_name: string) => {
+        const template = templateService.cloneTemplate(template_id, new_name);
+        if (!template) throw new Error("Failed to clone template");
+        return template;
+    }));
 
     // Template item handlers
-    ipcMain.handle("templateItem:create", async (event: IpcMainInvokeEvent, request: CreateTemplateItemRequest) => {
-        try {
-            return { success: true, data: templateService.createTemplateItem(request) };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("templateItem:create", respond((request: CreateTemplateItemRequest) => templateService.createTemplateItem(request)));
 
-    ipcMain.handle("templateItem:update", async (event: IpcMainInvokeEvent, request: UpdateTemplateItemRequest) => {
-        try {
-            const item = templateService.updateTemplateItem(request);
-            if (!item) {
-                return { success: false, error: "Template item not found" };
-            }
-            return { success: true, data: item };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("templateItem:update", respond((request: UpdateTemplateItemRequest) => {
+        const item = templateService.updateTemplateItem(request);
+        if (!item) throw new Error("Template item not found");
+        return item;
+    }));
 
-    ipcMain.handle("templateItem:delete", async (event: IpcMainInvokeEvent, item_id: number) => {
-        try {
-            const result = templateService.deleteTemplateItem(item_id);
-            return { success: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("templateItem:delete", respond((item_id: number) => templateService.deleteTemplateItem(item_id), { successFromBoolean: true }));
 
-    ipcMain.handle("templateItem:safeDelete", async (event: IpcMainInvokeEvent, item_id: number) => {
-        try {
-            const result = templateService.safeDeleteTemplateItem(item_id);
-            return { success: true, data: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("templateItem:safeDelete", respond((item_id: number) => templateService.safeDeleteTemplateItem(item_id)));
 
     // Project handlers
-    ipcMain.handle("project:create", async (event: IpcMainInvokeEvent, request: CreateProjectRequest) => {
-        try {
-            return { success: true, data: projectService.createProject(request) };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("project:create", respond((request: CreateProjectRequest) => projectService.createProject(request)));
 
-    ipcMain.handle(
-        "project:list",
-        async (event: IpcMainInvokeEvent, filter?: { search?: string; status?: string; template_id?: number }) => {
-            try {
-                return { success: true, data: projectService.listProjects(filter) };
-            } catch (error: any) {
-                return { success: false, error: error.message };
-            }
-        },
-    );
+    ipcMain.handle("project:list", respond((filter?: { search?: string; status?: string; template_id?: number }) => projectService.listProjects(filter)));
 
-    ipcMain.handle("project:get", async (event: IpcMainInvokeEvent, project_id: number) => {
-        try {
-            const project = projectService.getProjectWithDetails(project_id);
-            if (!project) {
-                return { success: false, error: "Project not found" };
-            }
-            return { success: true, data: project };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("project:get", respond((project_id: number) => {
+        const project = projectService.getProjectWithDetails(project_id);
+        if (!project) throw new Error("Project not found");
+        return project;
+    }));
 
-    ipcMain.handle("project:update", async (event: IpcMainInvokeEvent, request: UpdateProjectRequest) => {
-        try {
-            const project = projectService.updateProject(request);
-            if (!project) {
-                return { success: false, error: "Project not found" };
-            }
-            return { success: true, data: project };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("project:update", respond((request: UpdateProjectRequest) => {
+        const project = projectService.updateProject(request);
+        if (!project) throw new Error("Project not found");
+        return project;
+    }));
 
-    ipcMain.handle("project:delete", async (event: IpcMainInvokeEvent, project_id: number) => {
-        try {
-            const result = projectService.deleteProject(project_id);
-            return { success: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("project:delete", respond((project_id: number) => projectService.deleteProject(project_id), { successFromBoolean: true }));
 
-    ipcMain.handle("project:checkComplete", async (event: IpcMainInvokeEvent, project_id: number) => {
-        try {
-            const isComplete = projectService.checkProjectComplete(project_id);
-            return { success: true, data: isComplete };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("project:checkComplete", respond((project_id: number) => projectService.checkProjectComplete(project_id)));
 
     // Attachment handlers
-    ipcMain.handle("attachment:upload", async (event: IpcMainInvokeEvent, project_item_id: number) => {
-        try {
-            // Show file picker
-            const result = await dialog.showOpenDialog({
-                properties: ["openFile", "multiSelections"],
-                filters: [
-                    { name: "Documents", extensions: ["pdf", "jpg", "jpeg", "png", "ofd"] },
-                    { name: "All Files", extensions: ["*"] },
-                ],
-            });
-
-            if (result.canceled || result.filePaths.length === 0) {
-                return { success: false, error: "No file selected" };
-            }
-
-            const attachments = [];
-            for (const filePath of result.filePaths) {
-                const fileName = filePath.split(/[\\/]/).pop() || "file";
-                const attachment = attachmentService.uploadAttachment(project_item_id, filePath, fileName);
-                attachments.push(attachment);
-            }
-
-            return { success: true, data: attachments };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("attachment:upload", respond(async (project_item_id: number) => {
+        // Show file picker
+        const result = await dialog.showOpenDialog({
+            properties: ["openFile", "multiSelections"],
+            filters: [
+                { name: "Documents", extensions: [...ALLOWED_ATTACHMENT_EXTS] as string[] },
+                { name: "All Files", extensions: ["*"] },
+            ],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            throw new Error("No file selected");
         }
-    });
-
-    ipcMain.handle("attachment:list", async (event: IpcMainInvokeEvent, project_item_id: number) => {
-        try {
-            return { success: true, data: attachmentService.listAttachments(project_item_id) };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        const attachments: Attachment[] = [];
+        for (const filePath of result.filePaths) {
+            const fileName = filePath.split(/[\\/]/).pop() || "file";
+            const attachment = attachmentService.uploadAttachment(project_item_id, filePath, fileName);
+            attachments.push(attachment);
         }
-    });
+        return attachments;
+    }));
 
-    ipcMain.handle("attachment:delete", async (event: IpcMainInvokeEvent, attachment_id: number) => {
-        try {
-            const result = attachmentService.deleteAttachment(attachment_id);
-            return { success: result };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("attachment:list", respond((project_item_id: number) => attachmentService.listAttachments(project_item_id)));
+
+    ipcMain.handle("attachment:delete", respond((attachment_id: number) => attachmentService.deleteAttachment(attachment_id), { successFromBoolean: true }));
 
     ipcMain.handle(
         "attachment:getPath",
-        async (event: IpcMainInvokeEvent, attachment_id: number, use_watermarked: boolean = false) => {
-            try {
-                const path = attachmentService.getAttachmentFilePath(attachment_id, use_watermarked);
-                if (!path) {
-                    return { success: false, error: "Attachment not found" };
-                }
-                return { success: true, data: path };
-            } catch (error: any) {
-                return { success: false, error: error.message };
-            }
-        },
+        respond((attachment_id: number, use_watermarked: boolean = false) => {
+            const path = attachmentService.getAttachmentFilePath(attachment_id, use_watermarked);
+            if (!path) throw new Error("Attachment not found");
+            return path;
+        }),
     );
 
-    ipcMain.handle("attachment:rename", async (_event: IpcMainInvokeEvent, attachment_id: number, new_name: string) => {
-        try {
-            const updated = attachmentService.renameAttachment(attachment_id, new_name);
-            if (!updated) {
-                return { success: false, error: "Attachment not found" };
-            }
-            return { success: true, data: updated };
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : String(error);
-            return { success: false, error: message };
-        }
-    });
+    ipcMain.handle("attachment:rename", respond((attachment_id: number, new_name: string) => {
+        const updated = attachmentService.renameAttachment(attachment_id, new_name);
+        if (!updated) throw new Error("Attachment not found");
+        return updated;
+    }));
 
     ipcMain.handle(
         "attachment:uploadFromPaths",
-        async (
-            _event: IpcMainInvokeEvent,
-            project_item_id: number,
-            files: Array<{ path: string; original_name?: string }>,
-        ) => {
-            try {
-                const attachments: Attachment[] = [];
-                for (const f of files || []) {
-                    const filePath = f.path;
-                    const nameFromPath = basename(filePath) || "file";
-                    const originalName = f.original_name || nameFromPath;
-                    const a = attachmentService.uploadAttachment(project_item_id, filePath, originalName);
-                    attachments.push(a);
-                }
-                return { success: true, data: attachments };
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : String(error);
-                return { success: false, error: message };
+        respond((project_item_id: number, files: Array<{ path: string; original_name?: string }>) => {
+            const attachments: Attachment[] = [];
+            for (const f of files || []) {
+                const filePath = f.path;
+                const nameFromPath = basename(filePath) || "file";
+                const originalName = f.original_name || nameFromPath;
+                const a = attachmentService.uploadAttachment(project_item_id, filePath, originalName);
+                attachments.push(a);
             }
-        },
+            return attachments;
+        }),
     );
 
     ipcMain.handle(
         "attachment:uploadFromData",
-        async (
-            _event: IpcMainInvokeEvent,
-            project_item_id: number,
-            files: Array<{ data: Uint8Array | number[]; name?: string; mime?: string }>,
-        ) => {
-            try {
-                const attachments: Attachment[] = [];
-                for (const f of files || []) {
-                    const bytes = Array.isArray(f.data) ? Buffer.from(f.data) : Buffer.from(f.data as Uint8Array);
-                    const a = attachmentService.uploadAttachmentFromBuffer(project_item_id, bytes, f.name, f.mime);
-                    attachments.push(a);
-                }
-                return { success: true, data: attachments };
-            } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : String(error);
-                return { success: false, error: message };
+        respond((project_item_id: number, files: Array<{ data: Uint8Array | number[]; name?: string; mime?: string }>) => {
+            const attachments: Attachment[] = [];
+            for (const f of files || []) {
+                const bytes = Array.isArray(f.data) ? Buffer.from(f.data) : Buffer.from(f.data as Uint8Array);
+                const a = attachmentService.uploadAttachmentFromBuffer(project_item_id, bytes, f.name, f.mime);
+                attachments.push(a);
             }
-        },
+            return attachments;
+        }),
     );
 
-    ipcMain.handle("attachment:openExternal", async (event: IpcMainInvokeEvent, attachment_id: number) => {
-        try {
-            const path = attachmentService.getAttachmentFilePath(attachment_id, false);
-            if (!path) {
-                return { success: false, error: "File not found" };
-            }
-            await shell.openPath(path);
-            return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("attachment:openExternal", respond(async (attachment_id: number) => {
+        const path = attachmentService.getAttachmentFilePath(attachment_id, false);
+        if (!path) throw new Error("File not found");
+        await shell.openPath(path);
+        return true;
+    }, { successFromBoolean: true }));
 
     // Watermark handlers
-    ipcMain.handle("watermark:apply", async (event: IpcMainInvokeEvent, attachment_id: number) => {
-        try {
-            const path = await watermarkService.applyWatermark(attachment_id);
-            return { success: true, data: path };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    });
+    ipcMain.handle("watermark:apply", respond((attachment_id: number) => watermarkService.applyWatermark(attachment_id)));
 
     // Export/Import handlers
     ipcMain.handle("project:export", async (event: IpcMainInvokeEvent, project_id: number) => {

@@ -1,4 +1,4 @@
-import type { Project, ProjectMetadata, Template, TemplateWithItems } from "@common/types";
+import type { Project, ProjectMetadata, Template, TemplateWithItems, TemplateExportManifest } from "@common/types";
 import AdmZip from "adm-zip";
 import { app } from "electron";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";

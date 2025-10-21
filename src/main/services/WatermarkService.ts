@@ -6,6 +6,11 @@ import { AttachmentService } from "./AttachmentService";
 import { ProjectService } from "./ProjectService";
 import { TemplateService } from "./TemplateService";
 import { SettingsService } from "./SettingsService";
+import { DEFAULT_WATERMARK_SETTINGS, WATERMARK_IMAGE_EXTS } from "@common/constants";
+/**
+ * WatermarkService applies text watermarks to image attachments.
+ * It relies on current AppSettings as defaults and supports overrides per call.
+ */
 
 export class WatermarkService {
     private attachmentService: AttachmentService;
@@ -20,7 +25,10 @@ export class WatermarkService {
         this.settingsService = new SettingsService();
     }
 
-    // Apply watermark to an attachment
+    /**
+     * Apply a watermark to an attachment, producing a new watermarked file on disk.
+     * Returns the absolute path to the generated watermarked file.
+     */
     async applyWatermark(attachment_id: number, watermark_text?: string, config?: WatermarkConfig): Promise<string> {
         const attachment = this.attachmentService.getAttachment(attachment_id);
         if (!attachment) {
@@ -35,17 +43,7 @@ export class WatermarkService {
 
         // Merge settings and config
         const appSettings: AppSettings = this.settingsService.getAppSettings();
-        const wm = appSettings.watermark || {
-            textMode: 'template',
-            fontFamily: 'Arial',
-            fontSize: 48,
-            bold: false,
-            color: '#000000',
-            opacity: 0.3,
-            rotation: -45,
-            xPercent: 50,
-            yPercent: 50,
-        };
+        const wm = appSettings.watermark || DEFAULT_WATERMARK_SETTINGS;
 
         // Determine watermark text
         let finalWatermarkText = watermark_text;
@@ -75,7 +73,7 @@ export class WatermarkService {
         let watermarkedPath: string;
         const fileType = attachment.file_type.toLowerCase();
 
-        if (["jpg", "jpeg", "png"].includes(fileType)) {
+        if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(fileType)) {
             watermarkedPath = await this.applyImageWatermark(originalPath, attachment, finalConfig);
         } else {
             throw new Error(`Unsupported file type for watermarking: ${fileType}`);
@@ -89,7 +87,7 @@ export class WatermarkService {
         return watermarkedPath;
     }
 
-    // Generate watermark text from template
+    /** Build watermark text from project/template placeholders if none is provided explicitly. */
     private async generateWatermarkText(project_item_id: number): Promise<string> {
         const projectItem = this.projectService.getProjectItem(project_item_id);
         if (!projectItem) return "Reimbursement";
@@ -112,7 +110,7 @@ export class WatermarkService {
         return text;
     }
 
-    // Apply watermark to image using canvas
+    /** Render the watermark onto a raster image using node-canvas. */
     private async applyImageWatermark(
         originalPath: string,
         attachment: { file_name: string },

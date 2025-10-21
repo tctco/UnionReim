@@ -1,47 +1,30 @@
 import type { Attachment, ProjectItemWithDetails, Template, AppSettings } from "@common/types";
 import {
-    Badge,
     Body1,
     Button,
     Caption1,
-    Card,
-    Field,
-    Input,
     makeStyles,
     Spinner,
-    Textarea,
     Title3,
     tokens,
-    Tooltip,
     Toaster,
     useToastController,
     Toast,
     ToastTitle,
-    Dialog,
-    DialogSurface,
-    DialogBody,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
 } from "@fluentui/react-components";
-import {
-    ArrowUpload24Regular,
-    Delete24Regular,
-    DocumentRegular,
-    Eye24Regular,
-    Save24Regular,
-    Sparkle24Regular,
-    Copy24Regular,
-    Rename24Regular,
-} from "@fluentui/react-icons";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import RenameDialogSimple from "../components/Common/RenameDialogSimple";
 import { useAttachments } from "../hooks/useAttachments";
 import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
+import TemplateSelectorGrid from "../components/Template/TemplateSelectorGrid";
+import NewProjectMetadataForm from "../components/Project/NewProjectMetadataForm";
 import FileUploader from "../components/Common/FileUploader";
+import ProjectItemCard from "../components/Project/ProjectItemCard";
 import { useProject, useProjects } from "../hooks/useProjects";
 import { useTemplates } from "../hooks/useTemplates";
+import { DEFAULT_HOVER_PREVIEW_EDITOR, isAllowedAttachmentName } from "@common/constants";
 
 const useStyles = makeStyles({
     container: {
@@ -90,258 +73,15 @@ const useStyles = makeStyles({
         backgroundColor: tokens.colorNeutralBackground3,
         borderRadius: tokens.borderRadiusSmall,
     },
-    templateSelector: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-        gap: "12px",
-        marginTop: "16px",
-    },
-    templateCard: {
-        cursor: "pointer",
-        padding: "16px",
-        ":hover": {
-            backgroundColor: tokens.colorNeutralBackground1Hover,
-        },
-    },
 });
 
 // ---- Helpers and Subcomponents ----
-const ALLOWED_EXTS = new Set(["png", "jpg", "jpeg", "pdf", "ofd"]);
-const getExtLower = (name: string) => (name.split(".").pop() || "").toLowerCase();
-const isAllowed = (name: string) => ALLOWED_EXTS.has(getExtLower(name));
 
 type UploadCandidate = { path: string; original_name?: string };
 
-function AttachmentRowActions(props: {
-    attachment: Attachment;
-    needsWatermark: boolean;
-    onPreview: (a: Attachment) => void;
-    onCopyPath: (a: Attachment) => void;
-    onOpenRename: (a: Attachment) => void;
-    onWatermark: (a: Attachment) => void;
-    onDelete: (a: Attachment) => void;
-}) {
-    const { attachment, needsWatermark, onPreview, onCopyPath, onOpenRename, onWatermark, onDelete } = props;
-    return (
-        <div style={{ display: "flex", gap: "4px" }}>
-            <Tooltip content="Preview file" relationship="label">
-                <Button size="small" icon={<Eye24Regular />} onClick={() => onPreview(attachment)} appearance="subtle" />
-            </Tooltip>
-            <Tooltip content="Copy path" relationship="label">
-                <Button size="small" icon={<Copy24Regular />} onClick={() => onCopyPath(attachment)} appearance="subtle" />
-            </Tooltip>
-            <Tooltip content="Rename" relationship="label">
-                <Button size="small" icon={<Rename24Regular />} onClick={() => onOpenRename(attachment)} appearance="subtle" />
-            </Tooltip>
-            {needsWatermark && !attachment.has_watermark && (
-                <Tooltip content="Apply watermark" relationship="label">
-                    <Button size="small" icon={<Sparkle24Regular />} onClick={() => onWatermark(attachment)} appearance="subtle" />
-                </Tooltip>
-            )}
-            <Tooltip content="Delete file" relationship="label">
-                <Button size="small" icon={<Delete24Regular />} onClick={() => onDelete(attachment)} appearance="subtle" />
-            </Tooltip>
-        </div>
-    );
-}
+// Extracted to TemplateSelectorGrid component
 
-function RenameDialogSimple(props: {
-    open: boolean;
-    value: string;
-    onChange: (v: string) => void;
-    onCancel: () => void;
-    onConfirm: () => void;
-}) {
-    const { open, value, onChange, onCancel, onConfirm } = props;
-    return (
-        <Dialog open={open} onOpenChange={(_, data) => !data.open && onCancel()}>
-            <DialogSurface>
-                <DialogBody>
-                    <DialogTitle>重命名文件</DialogTitle>
-                    <DialogContent>
-                        <Field label="新文件名（不含扩展名）">
-                            <Input value={value} onChange={(_, data) => onChange(data.value)} placeholder="请输入新文件名" />
-                        </Field>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button appearance="secondary" onClick={onCancel}>取消</Button>
-                        <Button appearance="primary" onClick={onConfirm}>确定</Button>
-                    </DialogActions>
-                </DialogBody>
-            </DialogSurface>
-        </Dialog>
-    );
-}
-
-function ItemCard(props: {
-    item: ProjectItemWithDetails;
-    selected: boolean;
-    onSelect: () => void;
-    onUploadClick: (item: ProjectItemWithDetails) => void;
-    onDropUpload: (project_item_id: number, files: UploadCandidate[]) => void;
-    onHoverEnter: (a: Attachment, x: number, y: number) => void;
-    onHoverMove: (x: number, y: number) => void;
-    onHoverLeave: () => void;
-    onPreview: (a: Attachment) => void;
-    onCopyPath: (a: Attachment) => void;
-    onOpenRename: (a: Attachment) => void;
-    onWatermark: (a: Attachment) => void;
-    onDelete: (a: Attachment) => void;
-    classes: { itemCard: string; itemHeader: string; attachmentList: string; attachmentItem: string };
-}) {
-    const { item, selected, onSelect, onUploadClick, onDropUpload, onHoverEnter, onHoverMove, onHoverLeave, onPreview, onCopyPath, onOpenRename, onWatermark, onDelete, classes } = props;
-
-    const handleDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
-        e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-    };
-    const handleDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-        e.preventDefault();
-        const files = Array.from(e.dataTransfer?.files || []);
-        const candidates: UploadCandidate[] = [];
-        for (const f of files) {
-            const filePath = (f as unknown as { path?: string }).path as string | undefined;
-            const name = f.name || filePath || "file";
-            if (!isAllowed(name)) continue;
-            if (filePath) candidates.push({ path: filePath, original_name: name });
-        }
-        if (candidates.length > 0) onDropUpload(item.project_item_id, candidates);
-    };
-
-    return (
-        <Card
-            className={classes.itemCard}
-            onClick={onSelect}
-            aria-selected={selected}
-            appearance="filled-alternative"
-            style={{ border: selected ? `2px solid ${tokens.colorBrandStroke1}` : `1px solid ${tokens.colorNeutralStroke1}` }}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-        >
-            <div className={classes.itemHeader}>
-                <div>
-                    <Body1>{item.template_item.name}</Body1>
-                    {item.template_item.is_required && (
-                        <Badge color="danger" style={{ marginLeft: "8px" }}>Required</Badge>
-                    )}
-                    {item.template_item.needs_watermark && (
-                        <Badge color="informative" style={{ marginLeft: "8px" }}>Watermark</Badge>
-                    )}
-                </div>
-                <Button icon={<ArrowUpload24Regular />} onClick={() => onUploadClick(item)}>
-                    Upload
-                </Button>
-            </div>
-
-            {item.template_item.description && (
-                <Caption1 style={{ color: tokens.colorNeutralForeground3, marginBottom: "8px" }}>
-                    {item.template_item.description}
-                </Caption1>
-            )}
-
-            {item.attachments.length > 0 && (
-                <div className={classes.attachmentList}>
-                    {item.attachments.map((attachment) => (
-                        <div
-                            key={attachment.attachment_id}
-                            className={classes.attachmentItem}
-                            onMouseEnter={(e) => onHoverEnter(attachment, e.clientX, e.clientY)}
-                            onMouseMove={(e) => onHoverMove(e.clientX, e.clientY)}
-                            onMouseLeave={onHoverLeave}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                <DocumentRegular />
-                                <Caption1>{attachment.original_name}</Caption1>
-                                {attachment.has_watermark ? <Badge color="success">Watermarked</Badge> : <></>}
-                            </div>
-                            <AttachmentRowActions
-                                attachment={attachment}
-                                needsWatermark={item.template_item.needs_watermark}
-                                onPreview={onPreview}
-                                onCopyPath={onCopyPath}
-                                onOpenRename={onOpenRename}
-                                onWatermark={onWatermark}
-                                onDelete={onDelete}
-                            />
-                        </div>
-                    ))}
-                </div>
-            )}
-        </Card>
-    );
-}
-
-function NewProjectTemplateSelection(props: {
-    templates: Template[];
-    onCancel: () => void;
-    onSelect: (template: Template) => void;
-}) {
-    const { templates, onCancel, onSelect } = props;
-    const styles = useStyles();
-    return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Title3>Create New Project</Title3>
-                <Button onClick={onCancel}>Cancel</Button>
-            </div>
-
-            <Body1 style={{ marginBottom: "16px" }}>Select a template to get started:</Body1>
-
-            <div className={styles.templateSelector}>
-                {templates.map((template) => (
-                    <Card key={template.template_id} className={styles.templateCard} onClick={() => onSelect(template)}>
-                        <Body1 style={{ fontWeight: tokens.fontWeightSemibold }}>{template.name}</Body1>
-                        {template.description && (
-                            <Caption1 style={{ color: tokens.colorNeutralForeground3, marginTop: "4px" }}>
-                                {template.description}
-                            </Caption1>
-                        )}
-                    </Card>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function NewProjectMetadataEntry(props: {
-    selectedTemplate: Template;
-    name: string;
-    creator: string;
-    description: string;
-    onChangeName: (v: string) => void;
-    onChangeCreator: (v: string) => void;
-    onChangeDescription: (v: string) => void;
-    onBack: () => void;
-    onCreate: () => void;
-}) {
-    const { selectedTemplate, name, creator, description, onChangeName, onChangeCreator, onChangeDescription, onBack, onCreate } = props;
-    const styles = useStyles();
-    return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Title3>New Project - {selectedTemplate.name}</Title3>
-                <div style={{ display: "flex", gap: "8px" }}>
-                    <Button onClick={onBack}>Back</Button>
-                    <Button appearance="primary" icon={<Save24Regular />} onClick={onCreate}>
-                        Create
-                    </Button>
-                </div>
-            </div>
-
-            <div className={styles.section}>
-                <Field label="Project Name" required>
-                    <Input value={name} onChange={(_, data) => onChangeName(data.value)} placeholder="e.g., 2025 ISICDM Conference" />
-                </Field>
-                <Field label="Creator">
-                    <Input value={creator} onChange={(_, data) => onChangeCreator(data.value)} placeholder="Your name" />
-                </Field>
-                <Field label="Description">
-                    <Textarea value={description} onChange={(_, data) => onChangeDescription(data.value)} placeholder="Optional description" />
-                </Field>
-            </div>
-        </div>
-    );
-}
+// Extracted to components/Project/NewProjectMetadataForm
 
 export function ProjectEditorPage() {
     const styles = useStyles();
@@ -373,6 +113,8 @@ export function ProjectEditorPage() {
         }
     }, [project]);
 
+    // (removed duplicate paste-to-upload effect; unified below)
+
     // hover preview state (reuse same logic as ProjectPreviewPage)
     const [hoveredAttachment, setHoveredAttachment] = useState<Pick<Attachment, "attachment_id" | "file_type"> | null>(null);
     const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -384,12 +126,12 @@ export function ProjectEditorPage() {
             const res = await window.ContextBridge.settings.get();
             if (mounted && res.success && res.data) {
                 const s = res.data as AppSettings;
-                setPreviewSize({ width: s.hoverPreviewWidth ?? 360, height: s.hoverPreviewHeight ?? 240 });
+                setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_EDITOR.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_EDITOR.height });
             }
         }
         load();
         window.ContextBridge.onSettingsChanged((s: AppSettings) => {
-            setPreviewSize({ width: s.hoverPreviewWidth ?? 360, height: s.hoverPreviewHeight ?? 240 });
+            setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_EDITOR.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_EDITOR.height });
         });
         return () => {
             mounted = false;
@@ -400,13 +142,14 @@ export function ProjectEditorPage() {
     const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 
     useEffect(() => {
-        function onPaste(e: ClipboardEvent) {
+        async function onPaste(e: ClipboardEvent) {
             if (!selectedItemId) return;
             const target = e.target as HTMLElement | null;
             if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
 
             const pathCandidates: UploadCandidate[] = [];
             const dataCandidates: Array<{ data: ArrayBuffer; name?: string; mime?: string }> = [];
+            const readPromises: Array<Promise<void>> = [];
 
             const fileList = e.clipboardData?.files;
             if (fileList && fileList.length > 0) {
@@ -416,17 +159,19 @@ export function ProjectEditorPage() {
                     const mime = (f as File).type || "";
                     const allowedByMime = mime.startsWith("image/") || mime === "application/pdf";
                     if (!name && !allowedByMime) continue;
-                    if (!isAllowed(name) && !allowedByMime) continue;
+                    if (!isAllowedAttachmentName(name) && !allowedByMime) continue;
                     if (path) {
                         pathCandidates.push({ path, original_name: name });
                     } else {
-                        // No path; read data
-                        (f as File)
-                            .arrayBuffer()
-                            .then((buf) => {
-                                dataCandidates.push({ data: buf, name, mime });
-                            })
-                            .catch(() => void 0);
+                        // No path; read data (await later)
+                        readPromises.push(
+                            (f as File)
+                                .arrayBuffer()
+                                .then((buf) => {
+                                    dataCandidates.push({ data: buf, name, mime });
+                                })
+                                .catch(() => void 0),
+                        );
                     }
                 }
             }
@@ -438,27 +183,31 @@ export function ProjectEditorPage() {
                 if (p.startsWith("file://")) {
                     try { p = decodeURI(p.replace(/^file:\/\//, "")); } catch { /* ignore */ }
                 }
-                if (isAllowed(p)) pathCandidates.push({ path: p });
+                const nameFromPath = p.split(/[\\/]/).pop() || "file";
+                if (isAllowedAttachmentName(nameFromPath)) pathCandidates.push({ path: p, original_name: nameFromPath });
+            }
+
+            // Wait for reading all clipboard blobs without path
+            if (readPromises.length > 0) {
+                await Promise.all(readPromises);
             }
 
             if (pathCandidates.length === 0 && dataCandidates.length === 0) return;
 
             e.preventDefault();
-            (async () => {
-                try {
-                    if (pathCandidates.length > 0) {
-                        await onUploadFromPaths(selectedItemId, pathCandidates);
-                    }
-                    if (dataCandidates.length > 0) {
-                        await uploadFromData(selectedItemId, dataCandidates);
-                    }
-                    if (projectId) await loadProject(projectId);
-                    dispatchToast(<Toast><ToastTitle>上传成功</ToastTitle></Toast>, { intent: "success" });
-                } catch (err) {
-                    console.error("Paste upload failed:", err);
-                    dispatchToast(<Toast><ToastTitle>上传失败</ToastTitle></Toast>, { intent: "error" });
+            try {
+                if (pathCandidates.length > 0) {
+                    await onUploadFromPaths(selectedItemId, pathCandidates);
                 }
-            })();
+                if (dataCandidates.length > 0) {
+                    await uploadFromData(selectedItemId, dataCandidates);
+                }
+                if (projectId) await loadProject(projectId);
+                dispatchToast(<Toast><ToastTitle>上传成功</ToastTitle></Toast>, { intent: "success" });
+            } catch (err) {
+                console.error("Paste upload failed:", err);
+                dispatchToast(<Toast><ToastTitle>上传失败</ToastTitle></Toast>, { intent: "error" });
+            }
         }
         window.addEventListener("paste", onPaste);
         return () => window.removeEventListener("paste", onPaste);
@@ -466,7 +215,7 @@ export function ProjectEditorPage() {
 
     const onUploadFromPaths = async (project_item_id: number, files: UploadCandidate[]) => {
         try {
-            const filtered = files.filter((f) => isAllowed(f.original_name || f.path));
+            const filtered = files.filter((f) => isAllowedAttachmentName(f.original_name || f.path));
             if (filtered.length === 0) {
                 dispatchToast(<Toast><ToastTitle>不支持的文件类型</ToastTitle></Toast>, { intent: "warning" });
                 return;
@@ -607,18 +356,21 @@ export function ProjectEditorPage() {
     // New project - template selection
     if (isNew && !selectedTemplate) {
         return (
-            <NewProjectTemplateSelection
-                templates={templates}
-                onCancel={() => navigate("/projects")}
-                onSelect={(t) => setSelectedTemplate(t)}
-            />
+            <div className={styles.container}>
+                <div className={styles.header}>
+                    <Title3>Create New Project</Title3>
+                    <Button onClick={() => navigate("/projects")}>Cancel</Button>
+                </div>
+                <Body1 style={{ marginBottom: "16px" }}>Select a template to get started:</Body1>
+                <TemplateSelectorGrid templates={templates} onSelect={(t) => setSelectedTemplate(t)} />
+            </div>
         );
     }
 
     // New project - metadata entry
     if (isNew && selectedTemplate) {
         return (
-            <NewProjectMetadataEntry
+            <NewProjectMetadataForm
                 selectedTemplate={selectedTemplate}
                 name={name}
                 creator={creator}
@@ -628,6 +380,7 @@ export function ProjectEditorPage() {
                 onChangeDescription={setDescription}
                 onBack={() => setSelectedTemplate(null)}
                 onCreate={handleCreateProject}
+                classes={{ container: styles.container, header: styles.header, section: styles.section }}
             />
         );
     }
@@ -664,7 +417,7 @@ export function ProjectEditorPage() {
                             }
                         }}
                     >
-                                <ItemCard
+                                <ProjectItemCard
                                     item={item}
                                     selected={selectedItemId === item.project_item_id}
                                     onSelect={() => setSelectedItemId(item.project_item_id)}

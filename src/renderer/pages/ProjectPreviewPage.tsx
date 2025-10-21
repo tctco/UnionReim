@@ -21,6 +21,7 @@ import { useProject, useProjects } from "../hooks/useProjects";
 import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
 import type { AppSettings, Attachment } from "@common/types";
 import { useEffect, useState } from "react";
+import { DEFAULT_HOVER_PREVIEW_PREVIEW } from "@common/constants";
 
 const useStyles = makeStyles({
     container: {
@@ -104,16 +105,16 @@ export function ProjectPreviewPage() {
             if (mounted && res.success && res.data) {
                 const s = res.data as AppSettings;
                 setPreviewSize({
-                    width: s.hoverPreviewWidth ?? 400,
-                    height: s.hoverPreviewHeight ?? 400,
+                    width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_PREVIEW.width,
+                    height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_PREVIEW.height,
                 });
             }
         }
         load();
         window.ContextBridge.onSettingsChanged((s: AppSettings) => {
             setPreviewSize({
-                width: s.hoverPreviewWidth ?? 400,
-                height: s.hoverPreviewHeight ?? 400,
+                width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_PREVIEW.width,
+                height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_PREVIEW.height,
             });
         });
         return () => {
@@ -265,5 +266,4 @@ export function ProjectPreviewPage() {
         </div>
     );
 }
-
 

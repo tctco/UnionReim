@@ -3,7 +3,6 @@ import type {
     Project,
     ProjectItem,
     ProjectItemWithDetails,
-    ProjectMetadata,
     ProjectWithDetails,
     UpdateProjectRequest,
 } from "@common/types";

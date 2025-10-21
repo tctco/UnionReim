@@ -9,6 +9,10 @@ import type {
 } from "@common/types";
 import type Database from "better-sqlite3";
 import { DatabaseService } from "../database/Database";
+/**
+ * TemplateService encapsulates CRUD and query operations for templates and template items.
+ * Uses a shared better-sqlite3 connection from DatabaseService.
+ */
 
 export class TemplateService {
     private db: Database.Database;
@@ -18,6 +22,7 @@ export class TemplateService {
     }
 
     // Template operations
+    /** Create a template record and return the persisted row. */
     createTemplate(request: CreateTemplateRequest): Template {
         const now = Date.now();
         const stmt = this.db.prepare(`
@@ -37,6 +42,7 @@ export class TemplateService {
         return this.getTemplate(Number(result.lastInsertRowid))!;
     }
 
+    /** Fetch a single template by id. */
     getTemplate(template_id: number): Template | null {
         const stmt = this.db.prepare(`
             SELECT template_id, name, description, creator, is_default, create_time, update_time
@@ -53,6 +59,10 @@ export class TemplateService {
         };
     }
 
+    /**
+     * List templates with optional fuzzy `search` across name/description/creator.
+     * Ordered by default flag then by last update time.
+     */
     listTemplates(filter?: { search?: string }): Template[] {
         let query = `
             SELECT template_id, name, description, creator, is_default, create_time, update_time
@@ -78,6 +88,7 @@ export class TemplateService {
         }));
     }
 
+    /** Patch-update template fields. Returns the updated row or null if missing. */
     updateTemplate(request: UpdateTemplateRequest): Template | null {
         const updates: string[] = [];
         const params: any[] = [];
@@ -117,12 +128,14 @@ export class TemplateService {
         return this.getTemplate(request.template_id);
     }
 
+    /** Delete a template. Returns true if any row was removed. */
     deleteTemplate(template_id: number): boolean {
         const stmt = this.db.prepare("DELETE FROM templates WHERE template_id = ?");
         const result = stmt.run(template_id);
         return result.changes > 0;
     }
 
+    /** Deep-clone a template and all its items under a new name in a transaction. */
     cloneTemplate(template_id: number, new_name: string): Template | null {
         const original = this.getTemplateWithItems(template_id);
         if (!original) return null;
@@ -156,6 +169,7 @@ export class TemplateService {
     }
 
     // Template item operations
+    /** Create a template item for a given template. */
     createTemplateItem(request: CreateTemplateItemRequest): TemplateItem {
         const stmt = this.db.prepare(`
             INSERT INTO template_items (
@@ -182,6 +196,7 @@ export class TemplateService {
         return this.getTemplateItem(Number(result.lastInsertRowid))!;
     }
 
+    /** Fetch a template item by id. */
     getTemplateItem(item_id: number): TemplateItem | null {
         const stmt = this.db.prepare(`
             SELECT * FROM template_items WHERE item_id = ?
@@ -193,6 +208,7 @@ export class TemplateService {
         return this.mapTemplateItemFromRow(row);
     }
 
+    /** List items for a template ordered by display and id for stability. */
     listTemplateItems(template_id: number): TemplateItem[] {
         const stmt = this.db.prepare(`
             SELECT * FROM template_items
@@ -204,6 +220,7 @@ export class TemplateService {
         return rows.map((row) => this.mapTemplateItemFromRow(row));
     }
 
+    /** Patch-update a template item. Returns updated item or null if missing. */
     updateTemplateItem(request: UpdateTemplateItemRequest): TemplateItem | null {
         const updates: string[] = [];
         const params: any[] = [];

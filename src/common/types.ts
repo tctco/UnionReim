@@ -209,6 +209,28 @@ export interface MultipleTemplateExportRequest {
     destination_path?: string;
 }
 
+// Manifest used when exporting/importing templates as JSON
+export interface TemplateExportManifest {
+    version: string; // e.g. "1.0"
+    export_time: number;
+    template: {
+        name: string;
+        description?: string;
+        creator?: string;
+        items: Array<{
+            name: string;
+            description?: string;
+            is_required: boolean;
+            file_types?: string[];
+            needs_watermark: boolean;
+            watermark_template?: string;
+            allows_multiple_files: boolean;
+            display_order: number;
+            category?: string;
+        }>;
+    };
+}
+
 export interface TemplateModificationCheckResult {
     canModify: boolean;
     reason?: string;
@@ -247,5 +269,4 @@ export interface ProjectFilter {
     status?: string;
     template_id?: number;
 }
-
 

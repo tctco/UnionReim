@@ -1,84 +1,52 @@
 import type { CreateProjectRequest, Project, ProjectWithDetails, UpdateProjectRequest } from "@common/types";
 import { useCallback, useEffect, useState } from "react";
+import { callIpc, useAsyncTask } from "./useAsync";
+/**
+ * Hooks for Project entities with unified async handling.
+ */
 
 export function useProjects() {
     const [projects, setProjects] = useState<Project[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { loading, error, run, reset } = useAsyncTask();
 
     const loadProjects = useCallback(async (filter?: { search?: string; status?: string; template_id?: number }) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await window.ContextBridge.project.list(filter);
-            if (response.success && response.data) {
-                setProjects(response.data);
-            } else {
-                setError(response.error || "Failed to load projects");
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+        await run(async () => {
+            const data = await callIpc(() => window.ContextBridge.project.list(filter), "Failed to load projects");
+            setProjects(data || []);
+            return undefined as unknown as void;
+        });
     }, []);
 
     const createProject = useCallback(async (request: CreateProjectRequest) => {
-        setError(null);
-        const response = await window.ContextBridge.project.create(request);
-        if (response.success) {
-            await loadProjects();
-            return response.data!;
-        } else {
-            setError(response.error || "Failed to create project");
-            throw new Error(response.error);
-        }
+        reset();
+        const created = await callIpc(() => window.ContextBridge.project.create(request), "Failed to create project");
+        await loadProjects();
+        return created;
     }, [loadProjects]);
 
     const updateProject = useCallback(async (request: UpdateProjectRequest) => {
-        setError(null);
-        const response = await window.ContextBridge.project.update(request);
-        if (response.success) {
-            await loadProjects();
-            return response.data!;
-        } else {
-            setError(response.error || "Failed to update project");
-            throw new Error(response.error);
-        }
+        reset();
+        const updated = await callIpc(() => window.ContextBridge.project.update(request), "Failed to update project");
+        await loadProjects();
+        return updated;
     }, [loadProjects]);
 
     const deleteProject = useCallback(async (project_id: number) => {
-        setError(null);
-        const response = await window.ContextBridge.project.delete(project_id);
-        if (response.success) {
-            await loadProjects();
-        } else {
-            setError(response.error || "Failed to delete project");
-            throw new Error(response.error);
-        }
+        reset();
+        await callIpc(() => window.ContextBridge.project.delete(project_id), "Failed to delete project");
+        await loadProjects();
     }, [loadProjects]);
 
     const exportProject = useCallback(async (project_id: number) => {
-        setError(null);
-        const response = await window.ContextBridge.project.export(project_id);
-        if (response.success) {
-            return response.data!;
-        } else {
-            setError(response.error || "Failed to export project");
-            throw new Error(response.error);
-        }
+        reset();
+        return await callIpc(() => window.ContextBridge.project.export(project_id), "Failed to export project");
     }, []);
 
     const importProject = useCallback(async () => {
-        setError(null);
-        const response = await window.ContextBridge.project.import();
-        if (response.success) {
-            await loadProjects();
-            return response.data!;
-        } else {
-            setError(response.error || "Failed to import project");
-            throw new Error(response.error);
-        }
+        reset();
+        const imported = await callIpc(() => window.ContextBridge.project.import(), "Failed to import project");
+        await loadProjects();
+        return imported;
     }, [loadProjects]);
 
     useEffect(() => {
@@ -100,29 +68,19 @@ export function useProjects() {
 
 export function useProject(project_id: number | null) {
     const [project, setProject] = useState<ProjectWithDetails | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { loading, error, run } = useAsyncTask();
 
     const loadProject = useCallback(async (id: number) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await window.ContextBridge.project.get(id);
-            if (response.success && response.data) {
-                setProject(response.data);
-            } else {
-                setError(response.error || "Failed to load project");
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+        await run(async () => {
+            const data = await callIpc(() => window.ContextBridge.project.get(id), "Failed to load project");
+            setProject(data || null);
+            return undefined as unknown as void;
+        });
     }, []);
 
     const checkComplete = useCallback(async (id: number) => {
-        const response = await window.ContextBridge.project.checkComplete(id);
-        return response.success && response.data;
+        const res = await window.ContextBridge.project.checkComplete(id);
+        return res.success && Boolean(res.data);
     }, []);
 
     useEffect(() => {
