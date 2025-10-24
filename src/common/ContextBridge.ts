@@ -108,4 +108,9 @@ export type ContextBridge = {
     fonts: {
         list: () => Promise<ApiResponse<string[]>>;
     };
+
+    // System utilities
+    system: {
+        selectDirectory: () => Promise<ApiResponse<string | null>>;
+    };
 };

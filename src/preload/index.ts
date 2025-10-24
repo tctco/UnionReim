@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         setSetting: (key, value) => ipcRenderer.invoke("settings:setSetting", key, value),
     },
 
+    // System utilities
+    system: {
+        selectDirectory: () => ipcRenderer.invoke('system:selectDirectory'),
+    },
+
     // Template operations
     template: {
         create: (request) => ipcRenderer.invoke("template:create", request),

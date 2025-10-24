@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { app } from "electron";
 import { join } from "path";
 import { DatabaseService } from "../database/Database";
-import { DEFAULT_STORAGE_PATH } from "../constants";
+import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 import type { AppSettings, WatermarkSettings } from "@common/types";
 
 export class SettingsService {

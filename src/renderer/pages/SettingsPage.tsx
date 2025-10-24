@@ -163,16 +163,6 @@ export function SettingsPage() {
         setFormData(settings);
     };
 
-    const selectDefaultStoragePath = async () => {
-        try {
-            // For now, we'll use a simple input field
-            // In a real app, you might want to add a folder picker dialog
-            alert("请在输入框中直接输入文件夹路径");
-        } catch (error) {
-            console.error("Failed to select path:", error);
-        }
-    };
-
     const loadFonts = async () => {
         try {
             const res = await window.ContextBridge.fonts.list();
@@ -360,7 +350,6 @@ export function SettingsPage() {
                                 setFormData({ ...formData, defaultStoragePath: p });
                             }
                         }}
-                        onBrowse={selectDefaultStoragePath}
                     />
                     </AccordionPanel>
                 </AccordionItem>

@@ -6,7 +6,7 @@ import { basename, extname, join, dirname } from "path";
 import { DatabaseService } from "../database/Database";
 import { SettingsService } from "./SettingsService";
 import { DEFAULT_STORAGE_SUBPATH } from "@common/constants";
-import { DEFAULT_STORAGE_PATH } from "../constants";
+import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 
 export class AttachmentService {
     private db: Database.Database;

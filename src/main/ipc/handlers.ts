@@ -109,6 +109,17 @@ export function registerIpcHandlers(): void {
         return exportPath;
     }));
 
+    // System utilities
+    ipcMain.handle("system:selectDirectory", respond(async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openDirectory", "createDirectory"],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return null; // signify canceled selection
+        }
+        return result.filePaths[0];
+    }));
+
     ipcMain.handle("template:import", respond(async (_request: TemplateImportRequest) => {
         const result = await dialog.showOpenDialog({
             properties: ["openFile"],
