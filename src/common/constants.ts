@@ -36,5 +36,4 @@ export const DEFAULT_WATERMARK_SETTINGS: WatermarkSettings = {
 export const WATERMARK_IMAGE_EXTS = ["jpg", "jpeg", "png"] as const;
 
 // Hover preview default sizes (used when app settings are absent)
-export const DEFAULT_HOVER_PREVIEW_EDITOR = { width: 360, height: 240 } as const;
-export const DEFAULT_HOVER_PREVIEW_PREVIEW = { width: 400, height: 400 } as const;
+export const DEFAULT_HOVER_PREVIEW = { width: 360, height: 240 } as const;

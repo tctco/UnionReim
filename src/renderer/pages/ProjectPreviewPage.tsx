@@ -21,7 +21,7 @@ import { useProject, useProjects } from "../hooks/useProjects";
 import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
 import type { AppSettings, Attachment } from "@common/types";
 import { useEffect, useState } from "react";
-import { DEFAULT_HOVER_PREVIEW_PREVIEW } from "@common/constants";
+import { DEFAULT_HOVER_PREVIEW } from "@common/constants";
 
 const useStyles = makeStyles({
     container: {
@@ -90,7 +90,7 @@ export function ProjectPreviewPage() {
     const navigate = useNavigate();
 
     const { project, loading } = useProject(projectId);
-    const { exportProject, printProject } = useProjects();
+    const { exportProject } = useProjects();
 
     // hover preview state
     const [hoveredAttachment, setHoveredAttachment] = useState<Pick<Attachment, "attachment_id" | "file_type"> | null>(null);
@@ -105,16 +105,16 @@ export function ProjectPreviewPage() {
             if (mounted && res.success && res.data) {
                 const s = res.data as AppSettings;
                 setPreviewSize({
-                    width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_PREVIEW.width,
-                    height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_PREVIEW.height,
+                    width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW.width,
+                    height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW.height,
                 });
             }
         }
         load();
         window.ContextBridge.onSettingsChanged((s: AppSettings) => {
             setPreviewSize({
-                width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_PREVIEW.width,
-                height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_PREVIEW.height,
+                width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW.width,
+                height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW.height,
             });
         });
         return () => {
@@ -133,14 +133,7 @@ export function ProjectPreviewPage() {
     };
 
     const handlePrint = async () => {
-        try {
-            const res = await printProject(projectId);
-            if (res) {
-                alert("PDF generated and print dialog opened.");
-            }
-        } catch (err) {
-            console.error("Failed to print project:", err);
-        }
+        navigate(`/projects/${projectId}/print`);
     };
 
     if (loading || !project) {

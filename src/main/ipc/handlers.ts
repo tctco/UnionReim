@@ -352,5 +352,11 @@ export function registerIpcHandlers(): void {
     });
 
     // Print handlers
+    // Generate merged PDF and return its absolute path (no immediate print)
     ipcMain.handle("project:print", respond((project_id: number) => printService.printProject(project_id)));
+    // Confirm print: load the generated PDF and open system print dialog
+    ipcMain.handle("project:printConfirm", respond(async (file_path: string) => {
+        await printService.printFile(file_path);
+        return true;
+    }, { successFromBoolean: true }));
 }

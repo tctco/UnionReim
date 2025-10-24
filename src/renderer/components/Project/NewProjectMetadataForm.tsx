@@ -46,7 +46,7 @@ export default function NewProjectMetadataForm(props: {
 
       <div className={classes.section}>
         <Field label="Project Name" required>
-          <Input value={name} onChange={(_, data) => onChangeName(data.value)} placeholder="e.g., 2025 ISICDM Conference" />
+          <Input value={name} onChange={(_, data) => onChangeName(data.value)} placeholder="e.g., Conference Reimbursement" />
         </Field>
         <Field label="Creator">
           <Input value={creator} onChange={(_, data) => onChangeCreator(data.value)} placeholder="Your name" />

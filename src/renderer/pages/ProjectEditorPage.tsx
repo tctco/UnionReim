@@ -3,6 +3,7 @@ import {
     Body1,
     Button,
     Caption1,
+    Select,
     makeStyles,
     Spinner,
     Title3,
@@ -25,7 +26,7 @@ import FileUploader from "../components/Common/FileUploader";
 import ProjectItemCard from "../components/Project/ProjectItemCard";
 import { useProject, useProjects } from "../hooks/useProjects";
 import { useTemplates } from "../hooks/useTemplates";
-import { DEFAULT_HOVER_PREVIEW_EDITOR, isAllowedAttachmentName } from "@common/constants";
+import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
 
 const useStyles = makeStyles({
     container: {
@@ -103,6 +104,7 @@ export function ProjectEditorPage() {
     const [name, setName] = useState("");
     const [creator, setCreator] = useState("");
     const [description, setDescription] = useState("");
+    const [status, setStatus] = useState<'incomplete' | 'complete' | 'exported'>("incomplete");
     const [deleteConfirmAttachment, setDeleteConfirmAttachment] = useState<Attachment | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
@@ -111,8 +113,26 @@ export function ProjectEditorPage() {
             setName(project.name);
             setCreator(project.creator || "");
             setDescription(project.metadata?.description || "");
+            setStatus(project.status as 'incomplete' | 'complete' | 'exported');
         }
     }, [project]);
+
+    // Load default user name for new projects
+    useEffect(() => {
+        if (isNew) {
+            const loadDefaultUser = async () => {
+                try {
+                    const response = await window.ContextBridge.settings.getSetting("defaultUserName");
+                    if (response.success && response.data) {
+                        setCreator(response.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to load default user name:", error);
+                }
+            };
+            loadDefaultUser();
+        }
+    }, [isNew]);
 
     // (removed duplicate paste-to-upload effect; unified below)
 
@@ -127,12 +147,12 @@ export function ProjectEditorPage() {
             const res = await window.ContextBridge.settings.get();
             if (mounted && res.success && res.data) {
                 const s = res.data as AppSettings;
-                setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_EDITOR.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_EDITOR.height });
+                setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW.height });
             }
         }
         load();
         window.ContextBridge.onSettingsChanged((s: AppSettings) => {
-            setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW_EDITOR.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW_EDITOR.height });
+            setPreviewSize({ width: s.hoverPreviewWidth ?? DEFAULT_HOVER_PREVIEW.width, height: s.hoverPreviewHeight ?? DEFAULT_HOVER_PREVIEW.height });
         });
         return () => {
             mounted = false;
@@ -395,24 +415,41 @@ export function ProjectEditorPage() {
                     <Caption1>Template: {project.template.name}</Caption1>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                    <Button onClick={async () => {
-                        if (!projectId) return;
-                        try {
-                            const ok = await checkComplete(projectId);
-                            if (!ok) {
-                                dispatchToast(<Toast><ToastTitle>Some required items are missing</ToastTitle></Toast>, { intent: "warning" });
-                                return;
+                    <Select
+                        value={status}
+                        onChange={async (e) => {
+                            if (!projectId) return;
+                            const next = (e.target as HTMLSelectElement).value as 'incomplete' | 'complete' | 'exported';
+                            if (next === status) return;
+                            if (next === 'complete') {
+                                try {
+                                    const ok = await checkComplete(projectId);
+                                    if (!ok) {
+                                        dispatchToast(<Toast><ToastTitle>Some required items are missing</ToastTitle></Toast>, { intent: "warning" });
+                                        setStatus('incomplete');
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.error("Status validation failed:", err);
+                                }
                             }
-                            await updateProject({ project_id: projectId, status: "complete" });
-                            await loadProject(projectId);
-                            dispatchToast(<Toast><ToastTitle>Marked as completed</ToastTitle></Toast>, { intent: "success" });
-                        } catch (err) {
-                            console.error("Auto mark completed failed:", err);
-                            dispatchToast(<Toast><ToastTitle>Failed to update status</ToastTitle></Toast>, { intent: "error" });
-                        }
-                    }}>
-                        Mark Completed
-                    </Button>
+                            try {
+                                await updateProject({ project_id: projectId, status: next });
+                                setStatus(next);
+                                await loadProject(projectId);
+                                dispatchToast(<Toast><ToastTitle>Status updated</ToastTitle></Toast>, { intent: "success" });
+                            } catch (err) {
+                                console.error("Failed to update status:", err);
+                                dispatchToast(<Toast><ToastTitle>Failed to update status</ToastTitle></Toast>, { intent: "error" });
+                                setStatus(project?.status as 'incomplete' | 'complete' | 'exported' || 'incomplete');
+                            }
+                        }}
+                        aria-label="Project status"
+                    >
+                        <option value="incomplete">incomplete</option>
+                        <option value="complete">complete</option>
+                        {project.status === 'exported' && <option value="exported">exported</option>}
+                    </Select>
                     <Button appearance="primary" onClick={() => navigate(`/projects/${project.project_id}`)}>
                         Preview
                     </Button>

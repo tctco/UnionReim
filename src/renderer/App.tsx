@@ -11,6 +11,7 @@ import { AppLayout } from "./components/Layout/AppLayout";
 import { ProjectEditorPage } from "./pages/ProjectEditorPage";
 import { ProjectListPage } from "./pages/ProjectListPage";
 import { ProjectPreviewPage } from "./pages/ProjectPreviewPage";
+import { PrintPreviewPage } from "./pages/PrintPreviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { TemplateListPage } from "./pages/TemplateListPage";
@@ -71,6 +72,7 @@ export const App = () => {
                     <Route path="/projects" element={<ProjectListPage />} />
                     <Route path="/projects/new" element={<ProjectEditorPage />} />
                     <Route path="/projects/:id" element={<ProjectPreviewPage />} />
+                    <Route path="/projects/:id/print" element={<PrintPreviewPage />} />
                     <Route path="/projects/:id/edit" element={<ProjectEditorPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to="/templates" replace />} />

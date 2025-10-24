@@ -53,6 +53,10 @@ export function AppBreadcrumb() {
                 const projectId = path.match(/\/projects\/(\d+)\/edit$/)?.[1];
                 pathSegments.push({ label: 'Project Preview', path: `/projects/${projectId}` });
                 pathSegments.push({ label: 'Edit', path: path });
+            } else if (path.match(/\/projects\/\d+\/print$/)) {
+                const projectId = path.match(/\/projects\/(\d+)\/print$/)?.[1];
+                pathSegments.push({ label: 'Project Preview', path: `/projects/${projectId}` });
+                pathSegments.push({ label: 'Print', path: path });
             }
         }
 

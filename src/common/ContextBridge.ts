@@ -75,6 +75,7 @@ export type ContextBridge = {
         export: (project_id: number) => Promise<ApiResponse<string>>;
         import: () => Promise<ApiResponse<number>>;
         print: (project_id: number) => Promise<ApiResponse<string>>;
+        printConfirm: (file_path: string) => Promise<ApiResponse<void>>;
     };
 
     // Attachment operations

@@ -1,5 +1,5 @@
-import type { WatermarkSettings } from "@common/types";
 import { DEFAULT_WATERMARK_SETTINGS } from "@common/constants";
+import type { WatermarkSettings } from "@common/types";
 import {
     Button,
     Combobox,
@@ -13,7 +13,7 @@ import {
     tokens,
 } from "@fluentui/react-components";
 import { TextBold24Regular, TextItalic24Regular, TextUnderline24Regular } from "@fluentui/react-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ColorPickerPopover from "../Common/ColorPickerPopover";
 
 const useStyles = makeStyles({
@@ -75,6 +75,19 @@ const useStyles = makeStyles({
         border: `1px solid ${tokens.colorNeutralStroke1}`,
         display: "block",
     },
+    popupBoundaryWrap: {
+        position: "relative",
+        display: "inline-block",
+        maxWidth: "100%",
+    },
+    popupBoundaryBox: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "300px",
+        pointerEvents: "none",
+    },
 });
 
 export default function WatermarkSettingsPanel(props: {
@@ -90,20 +103,21 @@ export default function WatermarkSettingsPanel(props: {
     const { wm, fonts, onChange, previewImageSrc, previewText: previewTextControlled, onPreviewTextChange } = props;
     const styles = useStyles();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [fontBoundaryEl, setFontBoundaryEl] = useState<HTMLDivElement | null>(null);
     const [previewTextUncontrolled, setPreviewTextUncontrolled] = useState<string>("Watermark Preview");
     const imgRef = useRef<HTMLImageElement | null>(null);
     const [imgLoadedTick, setImgLoadedTick] = useState<number>(0);
 
     // Build options: always include current font so UI is usable even if fonts is empty
-    const fontOptions = useMemo(() => {
-        const current = wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily;
-        let merged = fonts;
-        if (current && !merged.includes(current)) {
-            merged = [current, ...merged];
-        }
-        const seen = new Set<string>();
-        return merged.filter((f) => (seen.has(f) ? false : (seen.add(f), true)));
-    }, [fonts, wm.fontFamily]);
+    // const fontOptions = useMemo(() => {
+    //     const current = wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily;
+    //     let merged = fonts;
+    //     if (current && !merged.includes(current)) {
+    //         merged = [current, ...merged];
+    //     }
+    //     const seen = new Set<string>();
+    //     return merged.filter((f) => (seen.has(f) ? false : (seen.add(f), true)));
+    // }, [fonts, wm.fontFamily]);
 
     useEffect(() => {
         if (!previewImageSrc) {
@@ -234,16 +248,28 @@ export default function WatermarkSettingsPanel(props: {
             </div>
             <div className={styles.flex}>
                 <Tooltip content="Font Family" relationship="label">
-                    <Combobox
-                        selectedOptions={[wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily!]}
-                        onOptionSelect={(_e, d) => onChange({ fontFamily: d.optionValue || undefined })}
-                    >
-                        {fontOptions.map((f) => (
-                            <Option key={f} value={f}>
-                                {f}
-                            </Option>
-                        ))}
-                    </Combobox>
+                    <div className={styles.popupBoundaryWrap}>
+                        <div ref={setFontBoundaryEl} className={styles.popupBoundaryBox} aria-hidden />
+                        <Combobox
+                        placeholder={wm.fontFamily || ""}
+                            selectedOptions={[wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily!]}
+                            onOptionSelect={(_e, d) => {
+                                if (fonts.includes(d.optionValue || ""))
+                                    onChange({ fontFamily: d.optionValue || undefined });
+                            }}
+                            positioning={{
+                                overflowBoundary: fontBoundaryEl || undefined,
+                                flipBoundary: fontBoundaryEl || undefined,
+                                autoSize: true,
+                            }}
+                        >
+                            {fonts.map((f) => (
+                                <Option key={f} value={f}>
+                                    {f}
+                                </Option>
+                            ))}
+                        </Combobox>
+                    </div>
                 </Tooltip>
 
                 <Tooltip content="Font Size (px)" relationship="label">
@@ -359,4 +385,3 @@ export default function WatermarkSettingsPanel(props: {
         </div>
     );
 }
-

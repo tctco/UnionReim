@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { basename, join } from 'path';
-import { app, BrowserWindow, dialog } from 'electron';
+import { BrowserWindow } from 'electron';
 import { AttachmentService } from './AttachmentService';
 import { ProjectService } from './ProjectService';
 
@@ -23,7 +23,7 @@ export class PrintService {
    * - Images are scaled to fit A4 (preserve aspect)
    * - If image has watermark, use the watermarked file
    * - For PDF attachments, import the first page
-   * Returns the written PDF file path. Also triggers system print.
+   * Saves to the project's directory and returns the written PDF file path.
    */
   async printProject(project_id: number): Promise<string> {
     const details = this.projectService.getProjectWithDetails(project_id);
@@ -94,38 +94,33 @@ export class PrintService {
       }
     }
 
-    // Determine output path via save dialog; fall back to temp if cancelled
+    // Determine output path under storage/<project_id>/print/<name>.pdf
     const safeName = (details.name || `project_${project_id}`).replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '_');
-    const defaultFileName = `${safeName}.pdf`;
-    const result = await dialog.showSaveDialog({
-      defaultPath: defaultFileName,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }],
-    });
+    const storageRoot = this.attachmentService.getStoragePath();
+    const outDir = join(storageRoot, String(project_id), 'print');
+    if (!existsSync(outDir)) {
+      try { mkdirSync(outDir, { recursive: true }); } catch {}
+    }
+    const outPath = join(outDir, `${safeName}.pdf`);
 
     const outputBytes = await pdf.save();
-    let outPath: string;
-    if (!result.canceled && result.filePath) {
-      outPath = result.filePath;
-    } else {
-      const tempDir = app.getPath('temp');
-      const ts = Date.now();
-      outPath = join(tempDir, `${safeName}_${ts}.pdf`);
-    }
-    // Ensure directory exists (in case of custom path)
     try {
-      const dir = outPath.substring(0, outPath.lastIndexOf('\\') > -1 ? outPath.lastIndexOf('\\') : outPath.lastIndexOf('/'));
-      if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true });
-    } catch {}
-    writeFileSync(outPath, outputBytes);
+      writeFileSync(outPath, outputBytes);
+    } catch (e) {
+      throw new Error('Failed to write merged PDF to project folder');
+    }
 
-    // Trigger printing by loading the PDF into a hidden window and calling print
-    await this.printFile(outPath);
-    return outPath;
+    // Return relative path under storage root for reimbursement:// usage
+    const relative = join(String(project_id), 'print', `${safeName}.pdf`);
+    return relative;
   }
 
-  private async printFile(filePath: string): Promise<void> {
+  async printFile(filePathOrUrl: string): Promise<void> {
     const win = new BrowserWindow({ show: false });
-    await win.loadURL(`file://${filePath}`);
+    const target = filePathOrUrl.startsWith('reimbursement://')
+      ? filePathOrUrl
+      : `file://${filePathOrUrl}`;
+    await win.loadURL(target);
     await new Promise<void>((resolve) => {
       win.webContents.print({ printBackground: true, silent: false }, () => {
         resolve();

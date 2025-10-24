@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         export: (project_id) => ipcRenderer.invoke("project:export", project_id),
         import: () => ipcRenderer.invoke("project:import"),
         print: (project_id) => ipcRenderer.invoke("project:print", project_id),
+        printConfirm: (file_path) => ipcRenderer.invoke("project:printConfirm", file_path),
     },
 
     // Attachment operations
