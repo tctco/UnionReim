@@ -82,7 +82,7 @@ export type ContextBridge = {
         list: (project_item_id: number) => Promise<ApiResponse<Attachment[]>>;
         delete: (attachment_id: number) => Promise<ApiResponse<boolean>>;
         getPath: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<string>>;
-        openExternal: (attachment_id: number) => Promise<ApiResponse<void>>;
+        openExternal: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<void>>;
         rename: (attachment_id: number, new_name: string) => Promise<ApiResponse<Attachment>>;
         uploadFromPaths: (
             project_item_id: number,
@@ -96,7 +96,9 @@ export type ContextBridge = {
 
     // Watermark operations
     watermark: {
-        apply: (attachment_id: number) => Promise<ApiResponse<string>>;
+        apply: (attachment_id: number, req?: { watermark_text?: string; config?: import('./types').WatermarkConfig }) => Promise<ApiResponse<string>>;
+        delete: (attachment_id: number) => Promise<ApiResponse<boolean>>;
+        resolveText: (attachment_id: number) => Promise<ApiResponse<string>>;
     };
 
     // Fonts operations

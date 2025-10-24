@@ -31,9 +31,9 @@ export function useAttachments() {
         return data || null;
     }, []);
 
-    const openExternal = useCallback(async (attachment_id: number) => {
+    const openExternal = useCallback(async (attachment_id: number, use_watermarked: boolean = false) => {
         reset();
-        await callIpc(() => window.ContextBridge.attachment.openExternal(attachment_id), "Failed to open file");
+        await callIpc(() => window.ContextBridge.attachment.openExternal(attachment_id, use_watermarked), "Failed to open file");
     }, []);
 
     const uploadFromPaths = useCallback(
@@ -80,6 +80,19 @@ export function useAttachments() {
         });
     }, []);
 
+    const applyWatermarkWithOptions = useCallback(async (attachment_id: number, req?: { watermark_text?: string; config?: any }) => {
+        return await run(async () => {
+            const data = await callIpc(() => window.ContextBridge.watermark.apply(attachment_id, req), "Failed to apply watermark");
+            return data as string;
+        });
+    }, []);
+
+    const removeWatermark = useCallback(async (attachment_id: number) => {
+        reset();
+        await callIpc(() => window.ContextBridge.watermark.delete(attachment_id), "Failed to delete watermark");
+        return true;
+    }, []);
+
     return {
         loading,
         error,
@@ -92,5 +105,7 @@ export function useAttachments() {
         uploadFromPaths,
         uploadFromData,
         applyWatermark,
+        applyWatermarkWithOptions,
+        removeWatermark,
     };
 }

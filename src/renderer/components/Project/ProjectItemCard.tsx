@@ -21,10 +21,13 @@ export default function ProjectItemCard(props: {
   onHoverEnter: (a: Attachment, x: number, y: number) => void;
   onHoverMove: (x: number, y: number) => void;
   onHoverLeave: () => void;
-  onPreview: (a: Attachment) => void;
-  onCopyPath: (a: Attachment) => void;
+  onPreviewOriginal: (a: Attachment) => void;
+  onPreviewWatermarked: (a: Attachment) => void;
+  onCopyPathOriginal: (a: Attachment) => void;
+  onCopyPathWatermarked: (a: Attachment) => void;
   onOpenRename: (a: Attachment) => void;
   onWatermark: (a: Attachment) => void;
+  onRemoveWatermark: (a: Attachment) => void;
   onDelete: (a: Attachment) => void;
   classes: { itemCard: string; itemHeader: string; attachmentList: string; attachmentItem: string };
 }) {
@@ -37,11 +40,14 @@ export default function ProjectItemCard(props: {
     onHoverEnter,
     onHoverMove,
     onHoverLeave,
-    onPreview,
-    onCopyPath,
+    onPreviewOriginal,
+    onPreviewWatermarked,
+    onCopyPathOriginal,
+    onCopyPathWatermarked,
     onOpenRename,
     onWatermark,
     onDelete,
+    onRemoveWatermark,
     classes,
   } = props;
 
@@ -111,10 +117,13 @@ export default function ProjectItemCard(props: {
               <AttachmentRowActions
                 attachment={attachment}
                 needsWatermark={!!item.template_item.needs_watermark}
-                onPreview={onPreview}
-                onCopyPath={onCopyPath}
+                onPreviewOriginal={onPreviewOriginal}
+                onPreviewWatermarked={onPreviewWatermarked}
+                onCopyPathOriginal={onCopyPathOriginal}
+                onCopyPathWatermarked={onCopyPathWatermarked}
                 onOpenRename={onOpenRename}
                 onWatermark={onWatermark}
+                onRemoveWatermark={onRemoveWatermark}
                 onDelete={onDelete}
               />
             </div>

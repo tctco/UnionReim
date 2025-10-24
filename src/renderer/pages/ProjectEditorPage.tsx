@@ -17,6 +17,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import RenameDialogSimple from "../components/Common/RenameDialogSimple";
 import { useAttachments } from "../hooks/useAttachments";
+import WatermarkApplyDialog from "../components/Watermark/WatermarkApplyDialog";
 import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
 import TemplateSelectorGrid from "../components/Template/TemplateSelectorGrid";
 import NewProjectMetadataForm from "../components/Project/NewProjectMetadataForm";
@@ -96,7 +97,7 @@ export function ProjectEditorPage() {
     const { templates } = useTemplates();
     const { createProject } = useProjects();
     const { project, loading, loadProject } = useProject(projectId);
-    const { uploadAttachment, deleteAttachment, applyWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
+    const { uploadAttachment, deleteAttachment, applyWatermark, applyWatermarkWithOptions, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
     const { dispatchToast } = useToastController();
 
     const [name, setName] = useState("");
@@ -278,42 +279,39 @@ export function ProjectEditorPage() {
         }
     };
 
+    const [wmAttachment, setWmAttachment] = useState<Attachment | null>(null);
+    const [wmDialogOpen, setWmDialogOpen] = useState<boolean>(false);
     const handleWatermark = async (attachment: Attachment) => {
-        console.log(attachment);
+        setWmAttachment(attachment);
+        setWmDialogOpen(true);
+    };
+    const handleRemoveWatermark = async (attachment: Attachment) => {
         try {
-            await applyWatermark(attachment.attachment_id);
-            if (projectId) {
-                await loadProject(projectId);
-            }
+            await removeWatermark(attachment.attachment_id);
+            if (projectId) await loadProject(projectId);
         } catch (err) {
-            console.error("Failed to apply watermark:", err);
+            console.error("Failed to delete watermark:", err);
         }
     };
 
-    const handlePreview = async (attachment: Attachment) => {
-        try {
-            await window.ContextBridge.attachment.openExternal(attachment.attachment_id);
-        } catch (err) {
-            console.error("Failed to preview file:", err);
-        }
+    const handlePreviewOriginal = async (attachment: Attachment) => {
+        try { await window.ContextBridge.attachment.openExternal(attachment.attachment_id, false); } catch (err) { console.error("Failed to preview file:", err); }
+    };
+    const handlePreviewWatermarked = async (attachment: Attachment) => {
+        try { await window.ContextBridge.attachment.openExternal(attachment.attachment_id, true); } catch (err) { console.error("Failed to preview file:", err); }
     };
 
-    const handleCopyPath = async (attachment: Attachment) => {
+    const copyPath = async (attachment: Attachment, use_watermarked: boolean) => {
         try {
-            const abs = await window.ContextBridge.attachment.getPath(attachment.attachment_id, false);
+            const abs = await window.ContextBridge.attachment.getPath(attachment.attachment_id, use_watermarked);
             if (abs.success && abs.data) {
                 await navigator.clipboard.writeText(abs.data);
-                dispatchToast(
-                    <Toast>
-                        <ToastTitle>Copied</ToastTitle>
-                    </Toast>,
-                    { intent: "success", timeout: 1500 }
-                );
+                dispatchToast(<Toast><ToastTitle>Copied</ToastTitle></Toast>, { intent: "success", timeout: 1500 });
             }
-        } catch (err) {
-            console.error("Failed to copy path:", err);
-        }
+        } catch (err) { console.error("Failed to copy path:", err); }
     };
+    const handleCopyPathOriginal = (a: Attachment) => copyPath(a, false);
+    const handleCopyPathWatermarked = (a: Attachment) => copyPath(a, true);
 
     const [renameTarget, setRenameTarget] = useState<Attachment | null>(null);
     const [renameInput, setRenameInput] = useState<string>("");
@@ -429,10 +427,13 @@ export function ProjectEditorPage() {
                                     }}
                                     onHoverMove={(x, y) => setMousePos({ x, y })}
                                     onHoverLeave={() => setHoveredAttachment(null)}
-                                    onPreview={handlePreview}
-                                    onCopyPath={handleCopyPath}
+                                    onPreviewOriginal={handlePreviewOriginal}
+                                    onPreviewWatermarked={handlePreviewWatermarked}
+                                    onCopyPathOriginal={handleCopyPathOriginal}
+                                    onCopyPathWatermarked={handleCopyPathWatermarked}
                                     onOpenRename={(a) => openRenameDialog(a)}
                                     onWatermark={handleWatermark}
+                                    onRemoveWatermark={handleRemoveWatermark}
                                     onDelete={handleDeleteClick}
                                     classes={{
                                         itemCard: styles.itemCard,
@@ -480,6 +481,17 @@ export function ProjectEditorPage() {
                 open={!!deleteConfirmAttachment}
                 onOpenChange={(open) => !open && setDeleteConfirmAttachment(null)}
                 destructive
+            />
+
+            <WatermarkApplyDialog
+                open={wmDialogOpen}
+                attachment={wmAttachment}
+                onCancel={() => { setWmDialogOpen(false); setWmAttachment(null); }}
+                onApplied={async () => {
+                    setWmDialogOpen(false);
+                    setWmAttachment(null);
+                    if (projectId) await loadProject(projectId);
+                }}
             />
         </div>
     );

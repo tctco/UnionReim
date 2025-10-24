@@ -252,15 +252,19 @@ export function registerIpcHandlers(): void {
         }),
     );
 
-    ipcMain.handle("attachment:openExternal", respond(async (attachment_id: number) => {
-        const path = attachmentService.getAttachmentFilePath(attachment_id, false);
+    ipcMain.handle("attachment:openExternal", respond(async (attachment_id: number, use_watermarked?: boolean) => {
+        const path = attachmentService.getAttachmentFilePath(attachment_id, !!use_watermarked);
         if (!path) throw new Error("File not found");
         await shell.openPath(path);
         return true;
     }, { successFromBoolean: true }));
 
     // Watermark handlers
-    ipcMain.handle("watermark:apply", respond((attachment_id: number) => watermarkService.applyWatermark(attachment_id)));
+    ipcMain.handle("watermark:apply", respond((attachment_id: number, req?: { watermark_text?: string; config?: any }) =>
+        watermarkService.applyWatermark(attachment_id, req?.watermark_text, req?.config)
+    ));
+    ipcMain.handle("watermark:delete", respond((attachment_id: number) => attachmentService.clearWatermark(attachment_id), { successFromBoolean: true }));
+    ipcMain.handle("watermark:resolveText", respond((attachment_id: number) => watermarkService.resolveWatermarkText(attachment_id)));
 
     // Export/Import handlers
     ipcMain.handle("project:export", async (event: IpcMainInvokeEvent, project_id: number) => {

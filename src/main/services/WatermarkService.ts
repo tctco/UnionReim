@@ -87,6 +87,22 @@ export class WatermarkService {
         return watermarkedPath;
     }
 
+    /** Return the resolved watermark text that would be used if applying now (without explicit override). */
+    async resolveWatermarkText(attachment_id: number): Promise<string> {
+        const attachment = this.attachmentService.getAttachment(attachment_id);
+        if (!attachment) throw new Error(`Attachment ${attachment_id} not found`);
+
+        const settingsService = new SettingsService();
+        const appSettings = settingsService.getAppSettings();
+        const wm = appSettings.watermark || DEFAULT_WATERMARK_SETTINGS;
+
+        if (wm.textMode === 'custom' && wm.customText && wm.customText.trim().length > 0) {
+            return wm.customText.trim();
+        }
+        // fallback to template-derived text
+        return await this.generateWatermarkText(attachment.project_item_id);
+    }
+
     /** Build watermark text from project/template placeholders if none is provided explicitly. */
     private async generateWatermarkText(project_item_id: number): Promise<string> {
         const projectItem = this.projectService.getProjectItem(project_item_id);
@@ -145,21 +161,29 @@ export class WatermarkService {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // Apply rotation with center anchor
+        // Apply rotation with center anchor, support multi-line text (\n)
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(((rotation || 0) * Math.PI) / 180);
-        ctx.fillText(config.text, 0, 0);
-        if (config.underline) {
-            const metrics = ctx.measureText(config.text);
-            const underlineY = (metrics.actualBoundingBoxDescent || 0) * 0.2 + 0; // near baseline
-            const width = metrics.width;
-            ctx.beginPath();
-            ctx.moveTo(-width / 2, underlineY);
-            ctx.lineTo(width / 2, underlineY);
-            ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
-            ctx.strokeStyle = color;
-            ctx.stroke();
+
+        const lines = String(config.text || "").split(/\r?\n/);
+        const lineHeight = Math.max(1, Math.round(fontSize * 1.2));
+        const startY = -((lines.length - 1) * lineHeight) / 2;
+        for (let i = 0; i < lines.length; i++) {
+            const ly = startY + i * lineHeight;
+            const line = lines[i];
+            ctx.fillText(line, 0, ly);
+            if (config.underline) {
+                const metrics = ctx.measureText(line);
+                const underlineY = ly + (metrics.actualBoundingBoxDescent || 0) * 0.2;
+                const width = metrics.width;
+                ctx.beginPath();
+                ctx.moveTo(-width / 2, underlineY);
+                ctx.lineTo(width / 2, underlineY);
+                ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
+                ctx.strokeStyle = color;
+                ctx.stroke();
+            }
         }
         ctx.restore();
 

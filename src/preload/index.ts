@@ -59,7 +59,7 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         list: (project_item_id) => ipcRenderer.invoke("attachment:list", project_item_id),
         delete: (attachment_id) => ipcRenderer.invoke("attachment:delete", attachment_id),
         getPath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getPath", attachment_id, use_watermarked),
-        openExternal: (attachment_id) => ipcRenderer.invoke("attachment:openExternal", attachment_id),
+        openExternal: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:openExternal", attachment_id, use_watermarked),
         rename: (attachment_id, new_name) => ipcRenderer.invoke("attachment:rename", attachment_id, new_name),
         uploadFromPaths: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromPaths", project_item_id, files),
         uploadFromData: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromData", project_item_id, files),
@@ -67,7 +67,9 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
 
     // Watermark operations
     watermark: {
-        apply: (attachment_id) => ipcRenderer.invoke("watermark:apply", attachment_id),
+        apply: (attachment_id, req) => ipcRenderer.invoke("watermark:apply", attachment_id, req),
+        delete: (attachment_id) => ipcRenderer.invoke("watermark:delete", attachment_id),
+        resolveText: (attachment_id) => ipcRenderer.invoke("watermark:resolveText", attachment_id),
     },
 
     // Fonts operations

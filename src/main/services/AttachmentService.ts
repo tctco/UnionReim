@@ -332,6 +332,38 @@ export class AttachmentService {
         return result.changes > 0;
     }
 
+    // Remove watermarked file and reset flags
+    clearWatermark(attachment_id: number): boolean {
+        const attachment = this.getAttachment(attachment_id);
+        if (!attachment) return false;
+
+        // Remove watermarked file from disk if present
+        if (attachment.watermarked_path) {
+            const abs = join(this.storagePath, attachment.watermarked_path);
+            if (existsSync(abs)) {
+                try { unlinkSync(abs); } catch {}
+            }
+        }
+
+        // Reset DB flags
+        const stmt = this.db.prepare(`
+            UPDATE attachments
+            SET has_watermark = 0, watermarked_path = NULL
+            WHERE attachment_id = ?
+        `);
+        const result = stmt.run(attachment_id);
+
+        // Update project item status back to 'uploaded'
+        const updateStmt = this.db.prepare(`
+            UPDATE project_items
+            SET status = 'uploaded'
+            WHERE project_item_id = ?
+        `);
+        updateStmt.run(attachment.project_item_id);
+
+        return result.changes > 0;
+    }
+
     getStoragePath(): string {
         return this.storagePath;
     }
@@ -376,13 +408,36 @@ export class AttachmentService {
         const relativeDirFromStorage = dirname(attachment.file_path); // e.g., <project_id>/items/<item_id>/original
         const newRelativePath = join(relativeDirFromStorage, candidate);
 
-        // Update DB
+        // If a watermarked file exists, rename it to keep base name consistent
+        let newWatermarkedRelativePath: string | undefined = undefined;
+        if (attachment.watermarked_path) {
+            const oldWaterAbs = join(this.storagePath, attachment.watermarked_path);
+            if (existsSync(oldWaterAbs)) {
+                const waterDir = dirname(oldWaterAbs);
+                const waterExt = extname(oldWaterAbs) || ".png";
+                // Keep the `_wm` suffix pattern used by WatermarkService
+                let waterCandidate = `${base}_wm${waterExt}`;
+                let wcounter = 1;
+                while (existsSync(join(waterDir, waterCandidate))) {
+                    waterCandidate = `${base}-${wcounter}_wm${waterExt}`;
+                    wcounter += 1;
+                }
+                const newWaterAbs = join(waterDir, waterCandidate);
+                try { renameSync(oldWaterAbs, newWaterAbs); } catch {}
+
+                // Build watermarked relative path from storage root
+                const waterRelDirFromStorage = dirname(attachment.watermarked_path);
+                newWatermarkedRelativePath = join(waterRelDirFromStorage, waterCandidate);
+            }
+        }
+
+        // Update DB (and watermarked path if changed)
         const stmt = this.db.prepare(`
             UPDATE attachments
-            SET file_name = ?, original_name = ?, file_path = ?
+            SET file_name = ?, original_name = ?, file_path = ?, watermarked_path = COALESCE(?, watermarked_path)
             WHERE attachment_id = ?
         `);
-        stmt.run(candidate, candidate, newRelativePath, attachment_id);
+        stmt.run(candidate, candidate, newRelativePath, newWatermarkedRelativePath ?? null, attachment_id);
 
         return this.getAttachment(attachment_id);
     }

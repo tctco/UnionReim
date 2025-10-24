@@ -1,4 +1,4 @@
-import { Combobox, Field, Input, Option, ToggleButton, makeStyles, tokens } from "@fluentui/react-components";
+import { Combobox, Field, Input, Option, ToggleButton, makeStyles, tokens, Textarea } from "@fluentui/react-components";
 import { TextBold24Regular, TextItalic24Regular, TextUnderline24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { WatermarkSettings } from "@common/types";
@@ -41,12 +41,19 @@ export default function WatermarkSettingsPanel(props: {
     wm: WatermarkSettings;
     fonts: string[];
     onChange: (patch: Partial<WatermarkSettings>) => void;
+    // Optional: preview target image url (reimbursement protocol or http) for contextual preview
+    previewImageSrc?: string;
+    // Optional controlled preview text (fallbacks to internal state if undefined)
+    previewText?: string;
+    onPreviewTextChange?: (text: string) => void;
 }) {
-    const { wm, fonts, onChange } = props;
+    const { wm, fonts, onChange, previewImageSrc, previewText: previewTextControlled, onPreviewTextChange } = props;
     const styles = useStyles();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const [previewText, setPreviewText] = useState<string>("Watermark Preview");
+    const [previewTextUncontrolled, setPreviewTextUncontrolled] = useState<string>("Watermark Preview");
     const [fontQuery, setFontQuery] = useState<string>("");
+    const imgRef = useRef<HTMLImageElement | null>(null);
+    const [imgLoadedTick, setImgLoadedTick] = useState<number>(0);
 
     const fontOptions = useMemo(() => {
         const base = fontQuery ? fonts.filter((f) => f.toLowerCase().includes(fontQuery.toLowerCase())) : fonts;
@@ -56,34 +63,71 @@ export default function WatermarkSettingsPanel(props: {
     }, [fonts, fontQuery]);
 
     useEffect(() => {
+        if (!previewImageSrc) {
+            imgRef.current = null;
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            imgRef.current = img;
+            // trigger a redraw
+            setImgLoadedTick((v) => v + 1);
+        };
+        img.onerror = () => {
+            imgRef.current = null;
+        };
+        img.src = previewImageSrc;
+        return () => {
+            // allow GC
+            imgRef.current = null;
+        };
+    }, [previewImageSrc]);
+
+    useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const width = 480;
-        const height = 320;
+
+        const bgImg = imgRef.current;
+        let width = 480;
+        let height = 320;
+        if (bgImg && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
+            // Use original image dimensions to match real watermark proportions
+            width = bgImg.naturalWidth;
+            height = bgImg.naturalHeight;
+        }
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
+        // Clear
         ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#f7f7f7";
-        ctx.fillRect(0, 0, width, height);
-        ctx.strokeStyle = "#e0e0e0";
-        ctx.lineWidth = 1;
-        for (let x = 0; x < width; x += 24) {
-            ctx.beginPath();
-            ctx.moveTo(x + 0.5, 0);
-            ctx.lineTo(x + 0.5, height);
-            ctx.stroke();
-        }
-        for (let y = 0; y < height; y += 24) {
-            ctx.beginPath();
-            ctx.moveTo(0, y + 0.5);
-            ctx.lineTo(width, y + 0.5);
-            ctx.stroke();
+
+        if (bgImg && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
+            // Draw original image at 1:1; CSS scales the canvas for display
+            ctx.drawImage(bgImg, 0, 0, width, height);
+        } else {
+            // Neutral background grid fallback
+            ctx.fillStyle = "#f7f7f7";
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = "#e0e0e0";
+            ctx.lineWidth = 1;
+            for (let x = 0; x < width; x += 24) {
+                ctx.beginPath();
+                ctx.moveTo(x + 0.5, 0);
+                ctx.lineTo(x + 0.5, height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < height; y += 24) {
+                ctx.beginPath();
+                ctx.moveTo(0, y + 0.5);
+                ctx.lineTo(width, y + 0.5);
+                ctx.stroke();
+            }
         }
 
-        const text = previewText || "Watermark Preview";
+        // Draw watermark exactly as main service does (percent + px font in image space)
+        const text = (previewTextControlled ?? previewTextUncontrolled) || "Watermark Preview";
         const x = (Math.max(0, Math.min(100, wm.xPercent ?? 50)) / 100) * width;
         const y = (Math.max(0, Math.min(100, wm.yPercent ?? 50)) / 100) * height;
         const fontSize = wm.fontSize ?? 48;
@@ -99,26 +143,41 @@ export default function WatermarkSettingsPanel(props: {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.font = `${fontItalic}${fontWeight}${fontSize}px ${fontFamily}`;
-        ctx.fillText(text, 0, 0);
-        if (wm.underline) {
-            const metrics = ctx.measureText(text);
-            const underlineY = (metrics.actualBoundingBoxDescent || 0) * 0.2 + 0;
-            const widthPx = metrics.width;
-            ctx.beginPath();
-            ctx.moveTo(-widthPx / 2, underlineY);
-            ctx.lineTo(widthPx / 2, underlineY);
-            ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
-            ctx.strokeStyle = wm.color || "#000000";
-            ctx.stroke();
+        const lines = String(text).split(/\r?\n/);
+        const lineHeight = Math.max(1, Math.round(fontSize * 1.2));
+        const startY = -((lines.length - 1) * lineHeight) / 2;
+        for (let i = 0; i < lines.length; i++) {
+            const ly = startY + i * lineHeight;
+            const line = lines[i];
+            ctx.fillText(line, 0, ly);
+            if (wm.underline) {
+                const metrics = ctx.measureText(line);
+                const underlineY = ly + (metrics.actualBoundingBoxDescent || 0) * 0.2;
+                const widthPx = metrics.width;
+                ctx.beginPath();
+                ctx.moveTo(-widthPx / 2, underlineY);
+                ctx.lineTo(widthPx / 2, underlineY);
+                ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
+                ctx.strokeStyle = wm.color || "#000000";
+                ctx.stroke();
+            }
         }
         ctx.restore();
-    }, [wm.fontFamily, wm.fontSize, wm.bold, wm.italic, wm.underline, wm.color, wm.opacity, wm.rotation, wm.xPercent, wm.yPercent, previewText]);
+    }, [wm.fontFamily, wm.fontSize, wm.bold, wm.italic, wm.underline, wm.color, wm.opacity, wm.rotation, wm.xPercent, wm.yPercent, previewTextControlled, previewTextUncontrolled, previewImageSrc, imgLoadedTick]);
 
     return (
         <div>
             <div className={styles.grid}>
                 <Field label="Preview Text" className={styles.controlFull}>
-                    <Input value={previewText} onChange={(_, d) => setPreviewText(d.value)} placeholder="Type here to preview (not saved)" />
+                    <Textarea
+                        value={previewTextControlled ?? previewTextUncontrolled}
+                        onChange={(_, d) => {
+                            if (onPreviewTextChange) onPreviewTextChange(d.value);
+                            else setPreviewTextUncontrolled(d.value);
+                        }}
+                        resize="vertical"
+                        placeholder="Type watermark text here (multi-line supported)"
+                    />
                 </Field>
 
                 <Field label="Font Family">
