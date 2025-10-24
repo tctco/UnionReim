@@ -21,7 +21,7 @@ export function isAllowedAttachmentName(name: string): boolean {
 export const DEFAULT_WATERMARK_SETTINGS: WatermarkSettings = {
   textMode: 'template',
   fontFamily: 'Arial',
-  fontSize: 48,
+  fontSize: 96,
   bold: false,
   italic: false,
   underline: false,

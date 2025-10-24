@@ -130,6 +130,7 @@ export function SettingsPage() {
             setLoading(true);
             const response = await window.ContextBridge.settings.get();
             if (response.success && response.data) {
+                console.log("response.data", response.data);
                 setSettings(response.data);
                 setFormData(response.data);
             }

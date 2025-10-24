@@ -42,6 +42,11 @@ export function useProjects() {
         return await callIpc(() => window.ContextBridge.project.export(project_id), "Failed to export project");
     }, []);
 
+    const printProject = useCallback(async (project_id: number) => {
+        reset();
+        return await callIpc(() => window.ContextBridge.project.print(project_id), "Failed to print project");
+    }, []);
+
     const importProject = useCallback(async () => {
         reset();
         const imported = await callIpc(() => window.ContextBridge.project.import(), "Failed to import project");
@@ -63,6 +68,7 @@ export function useProjects() {
         deleteProject,
         exportProject,
         importProject,
+        printProject,
     };
 }
 

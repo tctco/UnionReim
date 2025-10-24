@@ -21,6 +21,7 @@ import { ProjectService } from "../services/ProjectService";
 import { SettingsService } from "../services/SettingsService";
 import { TemplateService } from "../services/TemplateService";
 import { WatermarkService } from "../services/WatermarkService";
+import { PrintService } from "../services/PrintService";
 import { basename } from "path";
 
 export function registerIpcHandlers(): void {
@@ -30,6 +31,7 @@ export function registerIpcHandlers(): void {
     const attachmentService = new AttachmentService();
     const watermarkService = new WatermarkService();
     const exportImportService = new ExportImportService();
+    const printService = new PrintService();
 
     // Settings handlers
     ipcMain.handle("settings:get", respond(() => settingsService.getAppSettings()));
@@ -312,4 +314,7 @@ export function registerIpcHandlers(): void {
             return { success: false, error: error.message };
         }
     });
+
+    // Print handlers
+    ipcMain.handle("project:print", respond((project_id: number) => printService.printProject(project_id)));
 }

@@ -15,7 +15,7 @@ import {
     TableHeaderCell,
     TableRow,
 } from "@fluentui/react-components";
-import { ArrowUpload24Regular, Edit24Regular } from "@fluentui/react-icons";
+import { ArrowUpload24Regular, Edit24Regular, Print24Regular } from "@fluentui/react-icons";
 import { useParams, useNavigate } from "react-router";
 import { useProject, useProjects } from "../hooks/useProjects";
 import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview";
@@ -90,7 +90,7 @@ export function ProjectPreviewPage() {
     const navigate = useNavigate();
 
     const { project, loading } = useProject(projectId);
-    const { exportProject } = useProjects();
+    const { exportProject, printProject } = useProjects();
 
     // hover preview state
     const [hoveredAttachment, setHoveredAttachment] = useState<Pick<Attachment, "attachment_id" | "file_type"> | null>(null);
@@ -132,6 +132,17 @@ export function ProjectPreviewPage() {
         }
     };
 
+    const handlePrint = async () => {
+        try {
+            const res = await printProject(projectId);
+            if (res) {
+                alert("PDF generated and print dialog opened.");
+            }
+        } catch (err) {
+            console.error("Failed to print project:", err);
+        }
+    };
+
     if (loading || !project) {
         return (
             <div className={styles.container}>
@@ -152,6 +163,9 @@ export function ProjectPreviewPage() {
                         onClick={() => navigate(`/projects/${projectId}/edit`)}
                     >
                         Edit
+                    </Button>
+                    <Button onClick={handlePrint} icon={<Print24Regular />}>
+                        Print
                     </Button>
                     <Button
                         appearance="primary"
@@ -266,4 +280,3 @@ export function ProjectPreviewPage() {
         </div>
     );
 }
-

@@ -95,8 +95,8 @@ export function ProjectEditorPage() {
     const projectId = isNew ? null : parseInt(id || "0");
 
     const { templates } = useTemplates();
-    const { createProject } = useProjects();
-    const { project, loading, loadProject } = useProject(projectId);
+    const { createProject, updateProject } = useProjects();
+    const { project, loading, loadProject, checkComplete } = useProject(projectId);
     const { uploadAttachment, deleteAttachment, applyWatermark, applyWatermarkWithOptions, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
     const { dispatchToast } = useToastController();
 
@@ -394,9 +394,29 @@ export function ProjectEditorPage() {
                     <Title3>{project.name}</Title3>
                     <Caption1>Template: {project.template.name}</Caption1>
                 </div>
-                <Button appearance="primary" onClick={() => navigate(`/projects/${project.project_id}`)}>
-                    Preview
-                </Button>
+                <div style={{ display: "flex", gap: 8 }}>
+                    <Button onClick={async () => {
+                        if (!projectId) return;
+                        try {
+                            const ok = await checkComplete(projectId);
+                            if (!ok) {
+                                dispatchToast(<Toast><ToastTitle>Some required items are missing</ToastTitle></Toast>, { intent: "warning" });
+                                return;
+                            }
+                            await updateProject({ project_id: projectId, status: "complete" });
+                            await loadProject(projectId);
+                            dispatchToast(<Toast><ToastTitle>Marked as completed</ToastTitle></Toast>, { intent: "success" });
+                        } catch (err) {
+                            console.error("Auto mark completed failed:", err);
+                            dispatchToast(<Toast><ToastTitle>Failed to update status</ToastTitle></Toast>, { intent: "error" });
+                        }
+                    }}>
+                        Mark Completed
+                    </Button>
+                    <Button appearance="primary" onClick={() => navigate(`/projects/${project.project_id}`)}>
+                        Preview
+                    </Button>
+                </div>
             </div>
 
             <div className={styles.section}>

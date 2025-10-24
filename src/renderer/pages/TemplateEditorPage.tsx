@@ -3,6 +3,7 @@ import {
     Button,
     Checkbox,
     Field,
+    InfoLabel,
     Input,
     makeStyles,
     Spinner,
@@ -18,6 +19,7 @@ import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { useTemplate, useTemplates } from "../hooks/useTemplates";
 import { useSaveHandler } from "../utils/toastHelpers";
 import type { TemplateItem } from "@common/types";
+import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 
 const useStyles = makeStyles({
     container: {
@@ -284,7 +286,14 @@ export function TemplateEditorPage() {
                                     />
                                 </div>
                                 {item.needs_watermark && (
-                                    <Field label="Watermark Template" style={{ marginTop: "12px" }}>
+                                    <Field
+                                        label={
+                                            <InfoLabel info={`Available placeholders: ${formatWatermarkPlaceholderList()}`}>
+                                                Watermark Template
+                                            </InfoLabel>
+                                        }
+                                        style={{ marginTop: "12px" }}
+                                    >
                                         <Input
                                             value={item.watermark_template || ""}
                                             onChange={(_, data) => {

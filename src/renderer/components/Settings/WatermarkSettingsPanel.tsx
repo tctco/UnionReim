@@ -1,4 +1,5 @@
 import type { WatermarkSettings } from "@common/types";
+import { DEFAULT_WATERMARK_SETTINGS } from "@common/constants";
 import {
     Button,
     Combobox,
@@ -95,7 +96,7 @@ export default function WatermarkSettingsPanel(props: {
 
     // Build options: always include current font so UI is usable even if fonts is empty
     const fontOptions = useMemo(() => {
-        const current = wm.fontFamily || "Arial";
+        const current = wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily;
         let merged = fonts;
         if (current && !merged.includes(current)) {
             merged = [current, ...merged];
@@ -164,18 +165,18 @@ export default function WatermarkSettingsPanel(props: {
         }
 
         const text = (previewTextControlled ?? previewTextUncontrolled) || "Watermark Preview";
-        const x = (Math.max(0, Math.min(100, wm.xPercent ?? 50)) / 100) * width;
-        const y = (Math.max(0, Math.min(100, wm.yPercent ?? 50)) / 100) * height;
-        const fontSize = wm.fontSize ?? 48;
-        const fontFamily = wm.fontFamily || "Arial";
+        const x = (Math.max(0, Math.min(100, wm.xPercent ?? DEFAULT_WATERMARK_SETTINGS.xPercent!)) / 100) * width;
+        const y = (Math.max(0, Math.min(100, wm.yPercent ?? DEFAULT_WATERMARK_SETTINGS.yPercent!)) / 100) * height;
+        const fontSize = wm.fontSize ?? DEFAULT_WATERMARK_SETTINGS.fontSize!;
+        const fontFamily = wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily!;
         const fontWeight = wm.bold ? "bold " : "";
         const fontItalic = wm.italic ? "italic " : "";
 
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(((wm.rotation ?? -45) * Math.PI) / 180);
-        ctx.globalAlpha = wm.opacity ?? 0.3;
-        ctx.fillStyle = wm.color || "#000000";
+        ctx.rotate(((wm.rotation ?? DEFAULT_WATERMARK_SETTINGS.rotation!) * Math.PI) / 180);
+        ctx.globalAlpha = wm.opacity ?? DEFAULT_WATERMARK_SETTINGS.opacity!;
+        ctx.fillStyle = wm.color || DEFAULT_WATERMARK_SETTINGS.color!;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.font = `${fontItalic}${fontWeight}${fontSize}px ${fontFamily}`;
@@ -194,7 +195,7 @@ export default function WatermarkSettingsPanel(props: {
                 ctx.moveTo(-widthPx / 2, underlineY);
                 ctx.lineTo(widthPx / 2, underlineY);
                 ctx.lineWidth = Math.max(1, Math.round(fontSize / 15));
-                ctx.strokeStyle = wm.color || "#000000";
+                ctx.strokeStyle = wm.color || DEFAULT_WATERMARK_SETTINGS.color!;
                 ctx.stroke();
             }
         }
@@ -234,7 +235,7 @@ export default function WatermarkSettingsPanel(props: {
             <div className={styles.flex}>
                 <Tooltip content="Font Family" relationship="label">
                     <Combobox
-                        selectedOptions={[wm.fontFamily || "Arial"]}
+                        selectedOptions={[wm.fontFamily || DEFAULT_WATERMARK_SETTINGS.fontFamily!]}
                         onOptionSelect={(_e, d) => onChange({ fontFamily: d.optionValue || undefined })}
                     >
                         {fontOptions.map((f) => (
@@ -249,7 +250,7 @@ export default function WatermarkSettingsPanel(props: {
                     <Input
                         className={styles.smallInput}
                         type="number"
-                        value={String(wm.fontSize ?? 48)}
+                        value={String(wm.fontSize ?? DEFAULT_WATERMARK_SETTINGS.fontSize!)}
                         onChange={(_, d) => onChange({ fontSize: Number(d.value || 0) })}
                         min={8}
                         step={1}
@@ -289,8 +290,8 @@ export default function WatermarkSettingsPanel(props: {
                     </Tooltip>
                     <Tooltip content="Color & Opacity" relationship="label">
                         <ColorPickerPopover
-                            colorHex={wm.color || "#000000"}
-                            opacity={wm.opacity ?? 1}
+                            colorHex={wm.color || DEFAULT_WATERMARK_SETTINGS.color!}
+                            opacity={wm.opacity ?? DEFAULT_WATERMARK_SETTINGS.opacity}
                             onConfirm={(hex, alpha) => onChange({ color: hex, opacity: alpha })}
                             trigger={
                                 <Button className={styles.iconToggle} aria-label="Color and opacity">
@@ -304,7 +305,7 @@ export default function WatermarkSettingsPanel(props: {
                                             borderRadius: 4,
                                             cursor: "pointer",
                                             border: `1px solid ${tokens.colorNeutralStroke1}`,
-                                            background: wm.color || "#000000",
+                                            background: wm.color || DEFAULT_WATERMARK_SETTINGS.color!,
                                         }}
                                     />
                                 </Button>
@@ -318,7 +319,7 @@ export default function WatermarkSettingsPanel(props: {
                             <Input
                                 className={styles.smallInput}
                                 type="number"
-                                value={String(wm.rotation ?? -45)}
+                                value={String(wm.rotation ?? DEFAULT_WATERMARK_SETTINGS.rotation!)}
                                 onChange={(_, d) => onChange({ rotation: Number(d.value || 0) })}
                                 min={-180}
                                 max={180}
@@ -332,7 +333,7 @@ export default function WatermarkSettingsPanel(props: {
                             <Input
                                 className={styles.smallInput}
                                 type="number"
-                                value={String(wm.xPercent ?? 50)}
+                                value={String(wm.xPercent ?? DEFAULT_WATERMARK_SETTINGS.xPercent!)}
                                 onChange={(_, d) => onChange({ xPercent: Number(d.value || 0) })}
                                 min={0}
                                 max={100}
@@ -342,7 +343,7 @@ export default function WatermarkSettingsPanel(props: {
                             <Input
                                 className={styles.smallInput}
                                 type="number"
-                                value={String(wm.yPercent ?? 50)}
+                                value={String(wm.yPercent ?? DEFAULT_WATERMARK_SETTINGS.yPercent!)}
                                 onChange={(_, d) => onChange({ yPercent: Number(d.value || 0) })}
                                 min={0}
                                 max={100}

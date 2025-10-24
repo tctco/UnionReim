@@ -7,6 +7,7 @@ import { ProjectService } from "./ProjectService";
 import { TemplateService } from "./TemplateService";
 import { SettingsService } from "./SettingsService";
 import { DEFAULT_WATERMARK_SETTINGS, WATERMARK_IMAGE_EXTS } from "@common/constants";
+import { resolveWatermarkTemplate } from "@common/watermarkPlaceholders";
 /**
  * WatermarkService applies text watermarks to image attachments.
  * It relies on current AppSettings as defaults and supports overrides per call.
@@ -116,14 +117,13 @@ export class WatermarkService {
             return `${project.creator || "User"} - ${project.name}`;
         }
 
-        // Replace placeholders
-        let text = templateItem.watermark_template;
-        text = text.replace(/{userName}/g, project.creator || "User");
-        text = text.replace(/{itemName}/g, templateItem.name);
-        text = text.replace(/{projectName}/g, project.name);
-        text = text.replace(/{date}/g, new Date().toLocaleDateString());
-
-        return text;
+        // Replace placeholders via shared resolver
+        return resolveWatermarkTemplate(templateItem.watermark_template, {
+            userName: project.creator || "User",
+            itemName: templateItem.name,
+            projectName: project.name,
+            date: new Date().toLocaleDateString(),
+        });
     }
 
     /** Render the watermark onto a raster image using node-canvas. */

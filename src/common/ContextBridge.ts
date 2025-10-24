@@ -74,6 +74,7 @@ export type ContextBridge = {
         checkComplete: (project_id: number) => Promise<ApiResponse<boolean>>;
         export: (project_id: number) => Promise<ApiResponse<string>>;
         import: () => Promise<ApiResponse<number>>;
+        print: (project_id: number) => Promise<ApiResponse<string>>;
     };
 
     // Attachment operations

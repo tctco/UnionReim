@@ -269,4 +269,3 @@ export interface ProjectFilter {
     status?: string;
     template_id?: number;
 }
-
