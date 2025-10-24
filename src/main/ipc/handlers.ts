@@ -220,11 +220,36 @@ export function registerIpcHandlers(): void {
         }),
     );
 
+    ipcMain.handle(
+        "attachment:getRelativePath",
+        respond((attachment_id: number, use_watermarked: boolean = false) => {
+            const a = attachmentService.getAttachment(attachment_id);
+            if (!a) throw new Error("Attachment not found");
+            const rel = use_watermarked && a.watermarked_path ? a.watermarked_path : a.file_path;
+            return rel;
+        }),
+    );
+
     ipcMain.handle("attachment:rename", respond((attachment_id: number, new_name: string) => {
         const updated = attachmentService.renameAttachment(attachment_id, new_name);
         if (!updated) throw new Error("Attachment not found");
         return updated;
     }));
+
+    // Migrate storage root and persist the setting
+    ipcMain.handle("attachment:migrateStorage", respond((newRoot: string) => {
+        if (!newRoot || typeof newRoot !== 'string') {
+            throw new Error('Invalid path');
+        }
+        const ok = attachmentService.migrateStorage(newRoot);
+        if (!ok) throw new Error('Migration failed');
+        settingsService.setDefaultStoragePath(newRoot);
+        const updatedSettings = settingsService.getAppSettings();
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send("settings:changed", updatedSettings);
+        }
+        return true;
+    }, { successFromBoolean: true }));
 
     ipcMain.handle(
         "attachment:uploadFromPaths",

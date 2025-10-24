@@ -1,17 +1,23 @@
 import type { Attachment } from "@common/types";
 import type Database from "better-sqlite3";
 import { app } from "electron";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync, writeFileSync, readdirSync, statSync, rmSync } from "fs";
 import { basename, extname, join, dirname } from "path";
 import { DatabaseService } from "../database/Database";
+import { SettingsService } from "./SettingsService";
+import { DEFAULT_STORAGE_SUBPATH } from "@common/constants";
+import { DEFAULT_STORAGE_PATH } from "../constants";
 
 export class AttachmentService {
     private db: Database.Database;
     private storagePath: string;
+    private settingsService: SettingsService;
 
     constructor() {
         this.db = DatabaseService.getInstance().getDatabase();
-        this.storagePath = join(app.getPath("userData"), "storage", "projects");
+        this.settingsService = new SettingsService();
+        const configured = this.settingsService.getDefaultStoragePath();
+        this.storagePath = configured || DEFAULT_STORAGE_PATH;
 
         // Ensure storage directory exists
         if (!existsSync(this.storagePath)) {
@@ -365,7 +371,68 @@ export class AttachmentService {
     }
 
     getStoragePath(): string {
+        // Keep in sync with settings in case changed elsewhere
+        const configured = this.settingsService.getDefaultStoragePath();
+        if (configured && configured !== this.storagePath) {
+            this.storagePath = configured;
+            if (!existsSync(this.storagePath)) {
+                mkdirSync(this.storagePath, { recursive: true });
+            }
+        }
         return this.storagePath;
+    }
+
+    /**
+     * Migrate entire storage root to a new path, preserving relative layout.
+     * Updates internal storagePath after successful move.
+     */
+    migrateStorage(newRoot: string): boolean {
+        const currentRoot = this.getStoragePath();
+        if (!newRoot || newRoot === currentRoot) return true;
+
+        // Ensure parent directory exists
+        try { mkdirSync(dirname(newRoot), { recursive: true }); } catch {}
+
+        // If target does not exist, try rename for efficiency
+        const performCopyRecursive = () => {
+            // Copy contents currentRoot/* -> newRoot/*
+            const copyDir = (src: string, dest: string) => {
+                if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
+                for (const entry of readdirSync(src)) {
+                    const s = join(src, entry);
+                    const d = join(dest, entry);
+                    const st = statSync(s);
+                    if (st.isDirectory()) {
+                        copyDir(s, d);
+                    } else {
+                        copyFileSync(s, d);
+                    }
+                }
+            };
+            copyDir(currentRoot, newRoot);
+            // Remove old directory tree
+            try { rmSync(currentRoot, { recursive: true, force: true }); } catch {}
+        };
+
+        if (!existsSync(newRoot)) {
+            try {
+                // Try to move the whole directory
+                renameSync(currentRoot, newRoot);
+            } catch {
+                performCopyRecursive();
+            }
+        } else {
+            // Target exists, copy into it
+            performCopyRecursive();
+        }
+
+        // Update internal state
+        this.storagePath = newRoot;
+        // Ensure exists
+        if (!existsSync(this.storagePath)) {
+            mkdirSync(this.storagePath, { recursive: true });
+        }
+        return true;
     }
 
     // Sanitize base file name (without extension)

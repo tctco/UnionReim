@@ -22,6 +22,7 @@ import UserSettingsPanel from "../components/Settings/UserSettingsPanel";
 import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPanel";
 import FileSettingsPanel from "../components/Settings/FileSettingsPanel";
 import PreviewSettingsPanel from "../components/Settings/PreviewSettingsPanel";
+import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 // (local hsv type is defined inside ColorPickerPopover)
 
 const useStyles = makeStyles({
@@ -108,6 +109,8 @@ export function SettingsPage() {
     const [saving, setSaving] = useState(false);
 
     const [formData, setFormData] = useState<AppSettings>({});
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingStoragePath, setPendingStoragePath] = useState<string | null>(null);
     const [fonts, setFonts] = useState<string[]>([]);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     // local states not needed after splitting panels
@@ -272,6 +275,34 @@ export function SettingsPage() {
     return (
         <div className={styles.container}>
             <Toaster />
+
+            {/* Confirm migration dialog */}
+            <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title="迁移文件"
+                message="更改默认存储位置将迁移所有文件到新位置，可能需要一些时间。是否继续？"
+                confirmText="迁移并应用"
+                cancelText="取消"
+                onConfirm={async () => {
+                    if (!pendingStoragePath) return;
+                    try {
+                        const res = await window.ContextBridge.attachment.migrateStorage(pendingStoragePath);
+                        if (res.success) {
+                            // settings will be updated in main during migration; fetch fresh settings
+                            const updated = await window.ContextBridge.settings.get();
+                            if (updated.success && updated.data) {
+                                setSettings(updated.data);
+                                setFormData(updated.data);
+                            }
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        setPendingStoragePath(null);
+                    }
+                }}
+            />
             
             <div className={styles.header}>
                 <Settings24Regular />
@@ -319,7 +350,16 @@ export function SettingsPage() {
                     <AccordionPanel>
                     <FileSettingsPanel
                         defaultStoragePath={formData.defaultStoragePath}
-                        onChange={(p) => setFormData({ ...formData, defaultStoragePath: p })}
+                        onChange={(p) => {
+                            // If changed from current, ask to migrate immediately
+                            const current = settings.defaultStoragePath;
+                            if (p && p !== current) {
+                                setPendingStoragePath(p);
+                                setConfirmOpen(true);
+                            } else {
+                                setFormData({ ...formData, defaultStoragePath: p });
+                            }
+                        }}
                         onBrowse={selectDefaultStoragePath}
                     />
                     </AccordionPanel>

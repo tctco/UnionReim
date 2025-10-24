@@ -60,10 +60,12 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         list: (project_item_id) => ipcRenderer.invoke("attachment:list", project_item_id),
         delete: (attachment_id) => ipcRenderer.invoke("attachment:delete", attachment_id),
         getPath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getPath", attachment_id, use_watermarked),
+        getRelativePath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getRelativePath", attachment_id, use_watermarked),
         openExternal: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:openExternal", attachment_id, use_watermarked),
         rename: (attachment_id, new_name) => ipcRenderer.invoke("attachment:rename", attachment_id, new_name),
         uploadFromPaths: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromPaths", project_item_id, files),
         uploadFromData: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromData", project_item_id, files),
+        migrateStorage: (newRoot) => ipcRenderer.invoke("attachment:migrateStorage", newRoot),
     },
 
     // Watermark operations

@@ -1,5 +1,8 @@
 import type Database from "better-sqlite3";
+import { app } from "electron";
+import { join } from "path";
 import { DatabaseService } from "../database/Database";
+import { DEFAULT_STORAGE_PATH } from "../constants";
 import type { AppSettings, WatermarkSettings } from "@common/types";
 
 export class SettingsService {
@@ -17,6 +20,8 @@ export class SettingsService {
             language: 'zh-CN',
             hoverPreviewWidth: 400,
             hoverPreviewHeight: 400,
+            // Default to a single resolved path constant in main
+            defaultStoragePath: DEFAULT_STORAGE_PATH,
             watermark: {
                 textMode: 'template',
                 fontFamily: 'Arial',

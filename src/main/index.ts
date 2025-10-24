@@ -1,6 +1,9 @@
 import { BrowserWindow, app, ipcMain, nativeTheme, protocol, type IpcMainEvent } from "electron";
 import { join } from "path";
+import { SettingsService } from "./services/SettingsService";
 import { registerIpcHandlers } from "./ipc/handlers";
+import { DEFAULT_STORAGE_SUBPATH } from "@common/constants";
+import { DEFAULT_STORAGE_PATH } from "./constants";
 import { join as pathJoin, normalize as pathNormalize } from "path";
 
 // Register custom protocol privileges before app ready
@@ -58,9 +61,10 @@ const registerNativeThemeEventListeners = (allBrowserWindows: BrowserWindow[]) =
 (async () => {
     await app.whenReady();
     // Register reimbursement:// protocol to serve files from app storage
-    const storageRoot = pathJoin(app.getPath("userData"), "storage", "projects");
+    const settingsService = new SettingsService();
     protocol.registerFileProtocol("reimbursement", (request, callback) => {
         try {
+            const storageRoot = pathJoin(settingsService.getDefaultStoragePath() || DEFAULT_STORAGE_PATH);
             const url = new URL(request.url);
             const host = url.hostname || url.host || "";
             const pathname = url.pathname || "/";

@@ -83,6 +83,7 @@ export type ContextBridge = {
         list: (project_item_id: number) => Promise<ApiResponse<Attachment[]>>;
         delete: (attachment_id: number) => Promise<ApiResponse<boolean>>;
         getPath: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<string>>;
+        getRelativePath: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<string>>;
         openExternal: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<void>>;
         rename: (attachment_id: number, new_name: string) => Promise<ApiResponse<Attachment>>;
         uploadFromPaths: (
@@ -93,6 +94,7 @@ export type ContextBridge = {
             project_item_id: number,
             files: Array<{ data: number[]; name?: string; mime?: string }>,
         ) => Promise<ApiResponse<Attachment[]>>;
+        migrateStorage: (newRoot: string) => Promise<ApiResponse<boolean>>;
     };
 
     // Watermark operations

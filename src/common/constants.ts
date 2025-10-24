@@ -39,3 +39,11 @@ export const WATERMARK_IMAGE_EXTS = ["jpg", "jpeg", "png"] as const;
 export const DEFAULT_HOVER_PREVIEW_EDITOR = { width: 360, height: 240 } as const;
 export const DEFAULT_HOVER_PREVIEW_PREVIEW = { width: 400, height: 400 } as const;
 
+// Storage configuration
+// Keep storage-related constants grouped like watermark settings
+// Root under app userData
+export const DEFAULT_STORAGE_SUBPATH = "storage/projects" as const;
+// Common sub-directories inside each project/item
+export const STORAGE_DIR_ITEMS = "items" as const;
+export const STORAGE_DIR_ORIGINAL = "original" as const;
+export const STORAGE_DIR_WATERMARKED = "watermarked" as const;

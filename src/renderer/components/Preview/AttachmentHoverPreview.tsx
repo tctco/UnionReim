@@ -46,15 +46,9 @@ const useStyles = makeStyles({
     },
 });
 
-function toReimbursementUrl(absOrRelPath: string): string {
-    // absOrRelPath is absolute file path from main, like C:\\..\\storage\\projects\\1\\items\\...,
-    // or already a path relative to storage root if we choose to pass that in future.
-    // We only need the part after storage/projects/ to construct protocol URL.
-    const normalized = absOrRelPath.replace(/\\/g, "/");
-    const marker = "/storage/projects/";
-    const idx = normalized.lastIndexOf(marker);
-    const rel = idx >= 0 ? normalized.slice(idx + marker.length) : normalized;
-    return `reimbursement://attachments/${encodeURI(rel.replace(/^\//, ""))}`;
+function toReimbursementUrl(relativePath: string): string {
+    const rel = relativePath.replace(/^\/+/, "");
+    return `reimbursement://attachments/${encodeURI(rel)}`;
 }
 
 export function AttachmentHoverPreview(props: AttachmentHoverPreviewProps) {
@@ -77,7 +71,7 @@ export function AttachmentHoverPreview(props: AttachmentHoverPreviewProps) {
                 return;
             }
             try {
-                const res = await window.ContextBridge.attachment.getPath(attachment.attachment_id, true);
+                const res = await window.ContextBridge.attachment.getRelativePath(attachment.attachment_id, true);
                 if (!active) return;
                 if (res.success && res.data) {
                     setFilePath(res.data);
@@ -183,5 +177,4 @@ export function AttachmentHoverPreview(props: AttachmentHoverPreviewProps) {
 }
 
 export default AttachmentHoverPreview;
-
 
