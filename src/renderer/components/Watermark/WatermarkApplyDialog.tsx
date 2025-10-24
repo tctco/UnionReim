@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle } from "@fluentui/react-components";
 import type { Attachment, AppSettings, WatermarkSettings, WatermarkConfig } from "@common/types";
 import WatermarkSettingsPanel from "../Settings/WatermarkSettingsPanel";

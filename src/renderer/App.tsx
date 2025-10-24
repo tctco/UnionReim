@@ -60,7 +60,7 @@ export const App = () => {
     }, [themeSetting]);
 
     return (
-        <FluentProvider theme={theme} style={{ height: "100vh" }}>
+        <FluentProvider theme={theme} style={{ height: "100vh"}}>
             <AppLayout>
                 <Routes>
                     <Route path="/" element={<Navigate to="/projects" replace />} />

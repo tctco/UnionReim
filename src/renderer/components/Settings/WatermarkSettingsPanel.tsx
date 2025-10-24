@@ -1,22 +1,61 @@
-import { Combobox, Field, Input, Option, ToggleButton, makeStyles, tokens, Textarea } from "@fluentui/react-components";
+import type { WatermarkSettings } from "@common/types";
+import {
+    Button,
+    Combobox,
+    Field,
+    Input,
+    Option,
+    Textarea,
+    ToggleButton,
+    Tooltip,
+    makeStyles,
+    tokens,
+} from "@fluentui/react-components";
 import { TextBold24Regular, TextItalic24Regular, TextUnderline24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { WatermarkSettings } from "@common/types";
 import ColorPickerPopover from "../Common/ColorPickerPopover";
 
 const useStyles = makeStyles({
-    grid: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        gap: "12px 16px",
+    flex: {
+        display: "flex",
+        flexDirection: "row",
+        gap: "8px",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
     },
-    controlFull: {
-        gridColumn: "1 / -1",
+    inlineFields: {
+        display: "flex",
+        alignItems: "end",
+        gap: "12px",
+        flexWrap: "nowrap",
+        overflowX: "auto",
+        paddingBottom: "4px",
     },
     toolbar: {
         display: "flex",
         columnGap: "4px",
         alignItems: "center",
+    },
+    iconToggle: {
+        height: "28px",
+        minWidth: "28px",
+        padding: "2px",
+    },
+    compactField: {
+        justifySelf: "start",
+        width: "110px",
+    },
+    smallInput: {
+        width: "70px",
+    },
+    group: {
+        gridColumn: "1 / -1",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+    },
+    groupRow: {
+        display: "contents",
     },
     previewWrap: {
         display: "flex",
@@ -51,16 +90,19 @@ export default function WatermarkSettingsPanel(props: {
     const styles = useStyles();
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [previewTextUncontrolled, setPreviewTextUncontrolled] = useState<string>("Watermark Preview");
-    const [fontQuery, setFontQuery] = useState<string>("");
     const imgRef = useRef<HTMLImageElement | null>(null);
     const [imgLoadedTick, setImgLoadedTick] = useState<number>(0);
 
+    // Build options: always include current font so UI is usable even if fonts is empty
     const fontOptions = useMemo(() => {
-        const base = fontQuery ? fonts.filter((f) => f.toLowerCase().includes(fontQuery.toLowerCase())) : fonts;
-        const fallback = ["Arial", "Helvetica", "Times New Roman", "Courier New"];
-        const merged = (base.length > 0 ? base : fallback);
-        return merged;
-    }, [fonts, fontQuery]);
+        const current = wm.fontFamily || "Arial";
+        let merged = fonts;
+        if (current && !merged.includes(current)) {
+            merged = [current, ...merged];
+        }
+        const seen = new Set<string>();
+        return merged.filter((f) => (seen.has(f) ? false : (seen.add(f), true)));
+    }, [fonts, wm.fontFamily]);
 
     useEffect(() => {
         if (!previewImageSrc) {
@@ -70,7 +112,6 @@ export default function WatermarkSettingsPanel(props: {
         const img = new Image();
         img.onload = () => {
             imgRef.current = img;
-            // trigger a redraw
             setImgLoadedTick((v) => v + 1);
         };
         img.onerror = () => {
@@ -78,7 +119,6 @@ export default function WatermarkSettingsPanel(props: {
         };
         img.src = previewImageSrc;
         return () => {
-            // allow GC
             imgRef.current = null;
         };
     }, [previewImageSrc]);
@@ -91,7 +131,6 @@ export default function WatermarkSettingsPanel(props: {
         let width = 480;
         let height = 320;
         if (bgImg && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
-            // Use original image dimensions to match real watermark proportions
             width = bgImg.naturalWidth;
             height = bgImg.naturalHeight;
         }
@@ -100,14 +139,12 @@ export default function WatermarkSettingsPanel(props: {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // Clear
+        // Clear background
         ctx.clearRect(0, 0, width, height);
 
         if (bgImg && bgImg.naturalWidth > 0 && bgImg.naturalHeight > 0) {
-            // Draw original image at 1:1; CSS scales the canvas for display
             ctx.drawImage(bgImg, 0, 0, width, height);
         } else {
-            // Neutral background grid fallback
             ctx.fillStyle = "#f7f7f7";
             ctx.fillRect(0, 0, width, height);
             ctx.strokeStyle = "#e0e0e0";
@@ -126,7 +163,6 @@ export default function WatermarkSettingsPanel(props: {
             }
         }
 
-        // Draw watermark exactly as main service does (percent + px font in image space)
         const text = (previewTextControlled ?? previewTextUncontrolled) || "Watermark Preview";
         const x = (Math.max(0, Math.min(100, wm.xPercent ?? 50)) / 100) * width;
         const y = (Math.max(0, Math.min(100, wm.yPercent ?? 50)) / 100) * height;
@@ -163,12 +199,27 @@ export default function WatermarkSettingsPanel(props: {
             }
         }
         ctx.restore();
-    }, [wm.fontFamily, wm.fontSize, wm.bold, wm.italic, wm.underline, wm.color, wm.opacity, wm.rotation, wm.xPercent, wm.yPercent, previewTextControlled, previewTextUncontrolled, previewImageSrc, imgLoadedTick]);
+    }, [
+        wm.fontFamily,
+        wm.fontSize,
+        wm.bold,
+        wm.italic,
+        wm.underline,
+        wm.color,
+        wm.opacity,
+        wm.rotation,
+        wm.xPercent,
+        wm.yPercent,
+        previewTextControlled,
+        previewTextUncontrolled,
+        previewImageSrc,
+        imgLoadedTick,
+    ]);
 
     return (
-        <div>
-            <div className={styles.grid}>
-                <Field label="Preview Text" className={styles.controlFull}>
+        <div className={styles.group}>
+            <div className={styles.group}>
+                <Tooltip content="Preview Text" relationship="label">
                     <Textarea
                         value={previewTextControlled ?? previewTextUncontrolled}
                         onChange={(_, d) => {
@@ -178,67 +229,127 @@ export default function WatermarkSettingsPanel(props: {
                         resize="vertical"
                         placeholder="Type watermark text here (multi-line supported)"
                     />
-                </Field>
-
-                <Field label="Font Family">
+                </Tooltip>
+            </div>
+            <div className={styles.flex}>
+                <Tooltip content="Font Family" relationship="label">
                     <Combobox
                         selectedOptions={[wm.fontFamily || "Arial"]}
-                        defaultValue={wm.fontFamily || "Arial"}
                         onOptionSelect={(_e, d) => onChange({ fontFamily: d.optionValue || undefined })}
-                        onInput={(ev) => setFontQuery((ev.currentTarget as HTMLInputElement).value.trim())}
                     >
                         {fontOptions.map((f) => (
-                            <Option key={f} value={f}>{f}</Option>
+                            <Option key={f} value={f}>
+                                {f}
+                            </Option>
                         ))}
                     </Combobox>
-                </Field>
+                </Tooltip>
 
-                <Field label="Font Size (px)">
+                <Tooltip content="Font Size (px)" relationship="label">
                     <Input
+                        className={styles.smallInput}
                         type="number"
                         value={String(wm.fontSize ?? 48)}
                         onChange={(_, d) => onChange({ fontSize: Number(d.value || 0) })}
                         min={8}
                         step={1}
                     />
-                </Field>
+                </Tooltip>
 
-                <Field label="Text Style">
-                    <div className={styles.toolbar}>
-                        <ToggleButton appearance={wm.bold ? 'primary' : 'outline'} onClick={() => onChange({ bold: !wm.bold })} aria-label="Bold">
-                            <TextBold24Regular />
+                <div className={styles.toolbar}>
+                    <Tooltip content="Bold" relationship="label">
+                        <ToggleButton
+                            className={styles.iconToggle}
+                            appearance={wm.bold ? "primary" : "outline"}
+                            onClick={() => onChange({ bold: !wm.bold })}
+                            aria-label="Bold"
+                        >
+                            <TextBold24Regular style={{ width: 16, height: 16 }} />
                         </ToggleButton>
-                        <ToggleButton appearance={wm.italic ? 'primary' : 'outline'} onClick={() => onChange({ italic: !wm.italic })} aria-label="Italic">
-                            <TextItalic24Regular />
+                    </Tooltip>
+                    <Tooltip content="Italic" relationship="label">
+                        <ToggleButton
+                            className={styles.iconToggle}
+                            appearance={wm.italic ? "primary" : "outline"}
+                            onClick={() => onChange({ italic: !wm.italic })}
+                            aria-label="Italic"
+                        >
+                            <TextItalic24Regular style={{ width: 16, height: 16 }} />
                         </ToggleButton>
-                        <ToggleButton appearance={wm.underline ? 'primary' : 'outline'} onClick={() => onChange({ underline: !wm.underline })} aria-label="Underline">
-                            <TextUnderline24Regular />
+                    </Tooltip>
+                    <Tooltip content="Underline" relationship="label">
+                        <ToggleButton
+                            className={styles.iconToggle}
+                            appearance={wm.underline ? "primary" : "outline"}
+                            onClick={() => onChange({ underline: !wm.underline })}
+                            aria-label="Underline"
+                        >
+                            <TextUnderline24Regular style={{ width: 16, height: 16 }} />
                         </ToggleButton>
-                    </div>
-                </Field>
-
-                <Field label="Color">
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: 4, border: `1px solid ${tokens.colorNeutralStroke1}`, background: wm.color || "#000000" }} />
+                    </Tooltip>
+                    <Tooltip content="Color & Opacity" relationship="label">
                         <ColorPickerPopover
                             colorHex={wm.color || "#000000"}
                             opacity={wm.opacity ?? 1}
                             onConfirm={(hex, alpha) => onChange({ color: hex, opacity: alpha })}
+                            trigger={
+                                <Button className={styles.iconToggle} aria-label="Color and opacity">
+                                    <div
+                                        role="button"
+                                        aria-label="Pick color"
+                                        tabIndex={0}
+                                        style={{
+                                            width: 16,
+                                            height: 16,
+                                            borderRadius: 4,
+                                            cursor: "pointer",
+                                            border: `1px solid ${tokens.colorNeutralStroke1}`,
+                                            background: wm.color || "#000000",
+                                        }}
+                                    />
+                                </Button>
+                            }
                         />
-                    </div>
-                </Field>
+                    </Tooltip>
+                </div>
+                <div className={styles.groupRow}>
+                    <Field className={styles.compactField}>
+                        <Tooltip content="Rotation (deg)" relationship="label">
+                            <Input
+                                className={styles.smallInput}
+                                type="number"
+                                value={String(wm.rotation ?? -45)}
+                                onChange={(_, d) => onChange({ rotation: Number(d.value || 0) })}
+                                min={-180}
+                                max={180}
+                                step={1}
+                            />
+                        </Tooltip>
+                    </Field>
 
-                <Field label="Rotation (deg)">
-                    <Input type="number" value={String(wm.rotation ?? -45)} onChange={(_, d) => onChange({ rotation: Number(d.value || 0) })} min={-180} max={180} step={1} />
-                </Field>
-
-                <Field label="X Position (%)">
-                    <Input type="number" value={String(wm.xPercent ?? 50)} onChange={(_, d) => onChange({ xPercent: Number(d.value || 0) })} min={0} max={100} />
-                </Field>
-
-                <Field label="Y Position (%)">
-                    <Input type="number" value={String(wm.yPercent ?? 50)} onChange={(_, d) => onChange({ yPercent: Number(d.value || 0) })} min={0} max={100} />
-                </Field>
+                    <Field className={styles.toolbar}>
+                        <Tooltip content="X Position (%)" relationship="label">
+                            <Input
+                                className={styles.smallInput}
+                                type="number"
+                                value={String(wm.xPercent ?? 50)}
+                                onChange={(_, d) => onChange({ xPercent: Number(d.value || 0) })}
+                                min={0}
+                                max={100}
+                            />
+                        </Tooltip>
+                        <Tooltip content="Y Position (%)" relationship="label">
+                            <Input
+                                className={styles.smallInput}
+                                type="number"
+                                value={String(wm.yPercent ?? 50)}
+                                onChange={(_, d) => onChange({ yPercent: Number(d.value || 0) })}
+                                min={0}
+                                max={100}
+                            />
+                        </Tooltip>
+                    </Field>
+                </div>
             </div>
 
             <div className={styles.previewWrap}>
@@ -247,5 +358,4 @@ export default function WatermarkSettingsPanel(props: {
         </div>
     );
 }
-
 

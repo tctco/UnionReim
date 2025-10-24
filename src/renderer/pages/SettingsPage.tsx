@@ -175,8 +175,9 @@ export function SettingsPage() {
             if (res.success && Array.isArray(res.data)) {
                 setFonts(res.data);
             }
-        } catch {
+        } catch (error) {
             // ignore font load errors silently
+            console.error("Failed to load fonts:", error);
         }
     };
 
