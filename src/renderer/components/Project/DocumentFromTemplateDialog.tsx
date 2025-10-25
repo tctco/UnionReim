@@ -167,7 +167,7 @@ export default function DocumentFromTemplateDialog(props: {
                                 )}
                             </div>
                             <div className={styles.preview}>
-                                <QuillEditor readOnly valueHtml={previewHtml} minHeight={420} />
+                                <QuillEditor initialHtml={previewHtml} minHeight={420} />
                             </div>
                         </div>
                     </DialogContent>

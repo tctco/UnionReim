@@ -1,115 +1,331 @@
-import React, { forwardRef, useEffect, useLayoutEffect, useRef } from 'react';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
+import { Spinner } from "@fluentui/react-components";
+import Quill from "quill";
+import "quill/dist/quill.snow.css";
+import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+    QUILL_CN_FONT_SIZES,
+    QUILL_DEFAULT_FONT_FAMILY,
+    QUILL_DEFAULT_FONT_SIZE_PX,
+    QUILL_NUMERIC_FONT_SIZES,
+} from "../../../common/constants";
 
 type QuillEditorProps = {
-  readOnly?: boolean;
-  initialHtml?: string; // applied on first mount
-  valueHtml?: string; // controlled value synced to editor
-  onHtmlChange?: (html: string) => void;
-  placeholder?: string;
-  minHeight?: number;
+    readOnly?: boolean;
+    initialHtml?: string; // applied on first mount
+    onHtmlChange?: (html: string) => void;
+    placeholder?: string;
+    minHeight?: number;
+    showToolbar?: boolean; // whether to render toolbar
 };
 
 // Minimal Quill wrapper using HTML as the interchange format
-const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(({ readOnly, initialHtml, valueHtml, onHtmlChange, placeholder, minHeight = 240 }, ref) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const initialHtmlRef = useRef(initialHtml);
-  const onHtmlChangeRef = useRef(onHtmlChange);
-  const localRef = useRef<Quill | null>(null);
+const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
+    ({ readOnly, initialHtml, onHtmlChange, placeholder, minHeight = 240, showToolbar = true }, ref) => {
+        const containerRef = useRef<HTMLDivElement | null>(null);
+        const initialHtmlRef = useRef(initialHtml);
+        const onHtmlChangeRef = useRef(onHtmlChange);
+        const localRef = useRef<Quill | null>(null);
+        const [fontKeys, setFontKeys] = useState<string[] | null>(null);
+        const [sizeKeys, setSizeKeys] = useState<string[] | null>(null);
+        // Map css px value -> our registered size token (e.g. '14px' -> 'n-14px', '35px' -> 'cn-2')
+        const sizePxToTokenRef = useRef<Record<string, string>>({});
+        const styleTagRef = useRef<HTMLStyleElement | null>(null);
 
-  useLayoutEffect(() => {
-    onHtmlChangeRef.current = onHtmlChange;
-  });
+        useLayoutEffect(() => {
+            onHtmlChangeRef.current = onHtmlChange;
+        });
 
-  useEffect(() => {
-    const container = containerRef.current!;
-    const editorContainer = container.appendChild(container.ownerDocument.createElement('div'));
-    // styling wrapper
-    container.style.padding = '8px';
-    const quill = new Quill(editorContainer, {
-      theme: 'snow',
-      readOnly: !!readOnly,
-      modules: {
-        toolbar: [
-          // font and size selectors
-          [{ font: [] }, { size: [] }],
-          // headings
-          [{ header: [1, 2, 3, false] }],
-          // inline styles
-          ['bold', 'italic', 'underline', 'strike'],
-          // lists
-          [{ list: 'ordered' }, { list: 'bullet' }],
-          // rich content
-          ['link', 'blockquote'],
-          // clear formatting
-          ['clean'],
-        ],
-      },
-    });
-    (quill.root as HTMLElement).style.minHeight = `${minHeight}px`;
-    (quill.root as HTMLElement).style.padding = '4px 8px';
-    if (placeholder) quill.root.setAttribute('data-placeholder', placeholder);
+        useEffect(() => {initialHtmlRef.current = initialHtml}, [initialHtml])
 
-    localRef.current = quill;
-    // @ts-expect-error – we assign quill to parent ref
-    if (ref && typeof ref === 'object') ref.current = quill;
+        // Load local fonts and register a dynamic font whitelist
+        useEffect(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const res = await (window as any).ContextBridge?.fonts?.list?.();
+                    const available: string[] =
+                        res && res.success && Array.isArray(res.data) ? (res.data as string[]) : [];
+                    const preferred = [
+                        "Arial",
+                        "Times New Roman",
+                        "Courier New",
+                        "Calibri",
+                        "Microsoft YaHei",
+                        "SimSun",
+                        "SimHei",
+                        "PingFang SC",
+                        "Songti SC",
+                        "Helvetica",
+                        "Georgia",
+                        "Tahoma",
+                        "Verdana",
+                    ];
+                    const chosen: string[] = [];
+                    for (const p of preferred) if (available.includes(p)) chosen.push(p);
+                    const max = 999;
+                    for (const f of available) {
+                        if (chosen.length >= max) break;
+                        if (!chosen.includes(f)) chosen.push(f);
+                    }
+                    if (chosen.length === 0) chosen.push("Arial", "Times New Roman", "Courier New");
 
-    // Initialize content
-    if (initialHtmlRef.current) {
-      try {
-        quill.clipboard.dangerouslyPasteHTML(initialHtmlRef.current);
-      } catch {
-        quill.setText(initialHtmlRef.current || '');
-      }
-    }
+                    const toKey = (name: string) => name.replace(/\s+/g, "-");
+                    const keys = chosen.map(toKey);
 
-    const handler = () => {
-      let html = '';
-      // Prefer Quill v2 API if present
-      // @ts-ignore
-      if (typeof quill.getSemanticHTML === 'function') {
-        // @ts-ignore
-        html = quill.getSemanticHTML();
-      } else {
-        html = (quill.root as HTMLElement).innerHTML;
-      }
-      onHtmlChangeRef.current?.(html);
-    };
-    quill.on(Quill.events.TEXT_CHANGE, handler);
+                    // Generate CSS for toolbar labels and font application
+                    const css: string[] = [];
+                    for (let i = 0; i < chosen.length; i++) {
+                        const name = chosen[i];
+                        const key = keys[i];
+                        css.push(`.ql-font-${key}{font-family:"${name}"}`);
+                        css.push(
+                            `.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="${key}"]::before, .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="${key}"]::before{content:"${name}";font-family:"${name}"}`,
+                        );
+                    }
+                    if (!styleTagRef.current) {
+                        styleTagRef.current = document.createElement("style");
+                        document.head.appendChild(styleTagRef.current);
+                    }
+                    styleTagRef.current.textContent = css.join("\n");
 
-    return () => {
-      localRef.current = null;
-      // @ts-expect-error – clean up
-      if (ref && typeof ref === 'object') ref.current = null;
-      container.innerHTML = '';
-    };
-  }, []);
+                    try {
+                        const Font = Quill.import("formats/font") as any;
+                        Font.whitelist = keys;
+                        Quill.register(Font, true);
+                    } catch {}
+                    if (mounted) setFontKeys(keys);
+                } catch {
+                    try {
+                        const Font = Quill.import("formats/font") as any;
+                        Font.whitelist = [];
+                        Quill.register(Font, true);
+                    } catch {}
+                    if (mounted) setFontKeys([]);
+                }
+            })();
+            return () => {
+                mounted = false;
+            };
+        }, []);
 
-  // respond to readOnly changes
-  useEffect(() => {
-    const q = localRef.current;
-    if (q) q.enable(!readOnly);
-  }, [readOnly]);
+        // Build size options with class-based tokens so CN and numeric sizes coexist
+        useEffect(() => {
+            const cnSizes: Array<{ value: string; label: string }> = QUILL_CN_FONT_SIZES;
+            const numericSizes: string[] = [...QUILL_NUMERIC_FONT_SIZES];
 
-  // sync external value
-  useEffect(() => {
-    const q = localRef.current;
-    if (!q || valueHtml === undefined) return;
-    try {
-      // @ts-ignore Quill v2
-      const current = typeof q.getSemanticHTML === 'function' ? q.getSemanticHTML() : (q.root as HTMLElement).innerHTML;
-      if (current !== valueHtml) {
-        q.clipboard.dangerouslyPasteHTML(valueHtml);
-      }
-    } catch {
-      q.setText(valueHtml || '');
-    }
-  }, [valueHtml]);
+            // Create distinct tokens for CN and numeric sizes, both mapping to the same px via CSS classes.
+            // - CN tokens: cn-0, cn-1, ... (stable by order defined in constants)
+            // - Numeric tokens: n-10px, n-10_5px, ... ('.' replaced for safe CSS class names)
+            const cnEntries = cnSizes.map((s, idx) => ({
+                token: `cn-${idx}`,
+                px: s.value,
+                cnLabel: s.label,
+                numLabel: s.value.replace("px", ""),
+            }));
+            const numEntries = numericSizes.map((v) => ({
+                token: `n-${v.replace(".", "_")}`,
+                px: v,
+                cnLabel: "",
+                numLabel: v.replace("px", ""),
+            }));
 
-  return <div ref={containerRef} />;
-});
+            const allEntries = [...cnEntries, ...numEntries];
+            const tokens = allEntries.map((e) => e.token);
 
-QuillEditor.displayName = 'QuillEditor';
+            // Register class attributor so tokens are emitted as classes and resolved by CSS
+            try {
+                const Size: any = Quill.import("attributors/class/size");
+                Size.whitelist = tokens;
+                Quill.register(Size, true);
+            } catch {
+                // Fallback: attempt to create a class attributor via Parchment (Quill v2 ships it)
+                try {
+                    const Parchment: any = Quill.import("parchment");
+                    const SizeClass = new Parchment.Attributor.Class("size", "ql-size", {
+                        scope: Parchment.Scope.INLINE,
+                        whitelist: tokens,
+                    });
+                    Quill.register(SizeClass, true);
+                } catch {}
+            }
+
+            setSizeKeys(tokens);
+            // Build reverse map for clipboard matching (px -> token)
+            const pxToToken: Record<string, string> = {};
+            for (const e of allEntries) pxToToken[e.px] = e.token;
+            sizePxToTokenRef.current = pxToToken;
+
+            // Inject CSS: map each token to its px size, and add human-friendly labels in the picker
+            const css: string[] = [];
+            for (const e of allEntries) {
+                css.push(`.ql-size-${e.token}{font-size:${e.px}}`);
+                const label = e.cnLabel ? e.cnLabel : e.numLabel;
+                css.push(
+                    `.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=\"${e.token}\"]::before, .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=\"${e.token}\"]::before{content:\"${label}\"}`,
+                );
+            }
+            // Picker sizing and scroll behavior
+            css.push(`.ql-snow .ql-picker.ql-font { width: 160px; }`);
+            css.push(`.ql-snow .ql-picker.ql-size { width: 60px; }`);
+            css.push(`.ql-snow .ql-picker-label { max-width: 210px; overflow: hidden; text-overflow: ellipsis; }`);
+            css.push(
+                `.ql-snow .ql-picker.ql-font .ql-picker-options, .ql-snow .ql-picker.ql-size .ql-picker-options { max-height: 260px; overflow-y: auto; }`,
+            );
+
+            const tag = document.createElement("style");
+            tag.textContent = css.join("\n");
+            document.head.appendChild(tag);
+            return () => {
+                try {
+                    document.head.removeChild(tag);
+                } catch {}
+            };
+        }, []);
+
+        useEffect(() => {
+            if (fontKeys === null || sizeKeys === null) return; // wait for fonts and sizes
+            const container = containerRef.current!;
+            const editorContainer = container.appendChild(container.ownerDocument.createElement("div"));
+            // styling wrapper
+            container.style.padding = "8px";
+            const quill = new Quill(editorContainer, {
+                theme: "snow",
+                readOnly: !!readOnly,
+                modules: {
+                    toolbar: showToolbar
+                        ? [
+                              [{ font: fontKeys || [] }, { size: sizeKeys || [] }],
+                              ["bold", "italic", "underline", "strike"],
+                              [{ list: "ordered" }, { list: "bullet" }],
+                              ["clean"],
+                          ]
+                        : false,
+                },
+            });
+            (quill.root as HTMLElement).style.minHeight = `${minHeight}px`;
+            (quill.root as HTMLElement).style.padding = "4px 8px";
+            // Apply default editor font and size
+            (quill.root as HTMLElement).style.fontFamily = QUILL_DEFAULT_FONT_FAMILY;
+            (quill.root as HTMLElement).style.fontSize = QUILL_DEFAULT_FONT_SIZE_PX;
+            if (placeholder) quill.root.setAttribute("data-placeholder", placeholder);
+
+            localRef.current = quill;
+            // @ts-expect-error – we assign quill to parent ref
+            if (ref && typeof ref === "object") ref.current = quill;
+
+            // Preserve span classes on paste: map ql-size-* and ql-font-* to formats.
+            try {
+                const fontKeySet = new Set(fontKeys || []);
+                const pxToToken = sizePxToTokenRef.current || {};
+                quill.clipboard.addMatcher("SPAN", (node: any, delta: any) => {
+                    try {
+                        const el = node as HTMLElement;
+                        let sizeToken: string | null = null;
+                        let fontToken: string | null = null;
+                        if (el && el.classList) {
+                            for (const cls of Array.from(el.classList)) {
+                                if (!sizeToken && cls.startsWith("ql-size-")) sizeToken = cls.slice("ql-size-".length);
+                                if (!fontToken && cls.startsWith("ql-font-")) fontToken = cls.slice("ql-font-".length);
+                            }
+                        }
+                        // If no ql-size-* class, try inline style font-size
+                        if (!sizeToken && el && (el.getAttribute?.("style") || "")) {
+                            const style = el.getAttribute("style") || "";
+                            const m = /font-size\s*:\s*([^;]+);?/i.exec(style);
+                            if (m) {
+                                const raw = m[1].trim();
+                                // Normalize to px (Quill usually gives px), then map to token
+                                const px = raw.endsWith("px") ? raw : raw;
+                                if (pxToToken[px]) sizeToken = pxToToken[px];
+                            }
+                        }
+                        // Apply found formats to all ops in this span
+                        if (sizeToken || (fontToken && fontKeySet.has(fontToken))) {
+                            delta.ops = (delta.ops || []).map((op: any) => {
+                                if (typeof op.insert === "string") {
+                                    op.attributes = op.attributes || {};
+                                    if (sizeToken) op.attributes.size = sizeToken;
+                                    if (fontToken && fontKeySet.has(fontToken)) op.attributes.font = fontToken;
+                                }
+                                return op;
+                            });
+                        }
+                    } catch {}
+                    return delta;
+                });
+            } catch {}
+
+            // Initialize content
+            if (initialHtmlRef.current) {
+                try {
+                    console.log('paste html', initialHtmlRef.current);
+                    quill.clipboard.dangerouslyPasteHTML(initialHtmlRef.current);
+                } catch {
+                    console.log('set text', initialHtmlRef.current);
+                    quill.setText(initialHtmlRef.current || "");
+                }
+            }
+
+            // Ensure toolbar default shows 14px label (numeric) regardless of first option order
+            try {
+                const defaultSizeToken = `n-${QUILL_DEFAULT_FONT_SIZE_PX.replace(".", "_")}`;
+                // Set a collapsed selection to apply active format for upcoming input and reflect in toolbar
+                quill.setSelection(0, 0, Quill.sources.SILENT);
+                quill.format("size", defaultSizeToken, Quill.sources.SILENT);
+            } catch {}
+
+            const handler = () => {
+                let html = "";
+                // Prefer Quill v2 API if present
+                // @ts-ignore
+                if (typeof quill.getSemanticHTML === "function") {
+                    // @ts-ignore
+                    html = quill.getSemanticHTML();
+                } else {
+                    html = (quill.root as HTMLElement).innerHTML;
+                }
+                onHtmlChangeRef.current?.(html);
+            };
+            quill.on(Quill.events.TEXT_CHANGE, handler);
+
+            return () => {
+                console.log('set null')
+                localRef.current = null;
+                // @ts-expect-error – clean up
+                if (ref && typeof ref === "object") ref.current = null;
+                container.innerHTML = "";
+            };
+        }, [fontKeys, sizeKeys]);
+
+        // respond to readOnly changes
+        useEffect(() => {
+            const q = localRef.current;
+            if (q) q.enable(!readOnly);
+        }, [readOnly]);
+
+        const isLoading = fontKeys === null || sizeKeys === null;
+
+        return (
+            <div style={{ position: "relative" }}>
+                {isLoading && (
+                    <div
+                        style={{
+                            minHeight: `${minHeight}px`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: 8,
+                        }}
+                    >
+                        <Spinner label="正在加载字体…" />
+                    </div>
+                )}
+                <div ref={containerRef} style={{ opacity: isLoading ? 0 : 1 }} />
+            </div>
+        );
+    },
+);
+
+QuillEditor.displayName = "QuillEditor";
 
 export default QuillEditor;

@@ -99,7 +99,7 @@ export function ProjectEditorPage() {
 
     const { templates } = useTemplates();
     const { documents } = useDocumentTemplates();
-    const { createProject, updateProject } = useProjects();
+    const { createProject, updateProject } = useProjects(); 
     const { project, loading, loadProject, checkComplete } = useProject(projectId);
     const { docs: projectDocs, load: loadProjectDocs, create: createProjectDoc, remove: removeProjectDoc } = useProjectDocuments(projectId);
     const { uploadAttachment, deleteAttachment, applyWatermark, applyWatermarkWithOptions, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();

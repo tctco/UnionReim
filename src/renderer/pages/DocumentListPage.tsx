@@ -16,9 +16,10 @@ import {
     makeStyles,
     tokens,
 } from "@fluentui/react-components";
-import { useNavigate } from "react-router";
 import { Delete24Regular, MoreVertical24Regular, Search24Regular } from "@fluentui/react-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { DocumentTemplate } from "@common/types";
+import { useNavigate } from "react-router";
 import { useDocumentTemplates } from "../hooks/useDocuments";
 import { useDeleteHandler } from "../utils/toastHelpers";
 
@@ -31,6 +32,78 @@ const useStyles = makeStyles({
     card: { cursor: "pointer", ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover } },
     cardContent: { padding: "12px 16px" },
 });
+
+type DocumentItem = DocumentTemplate;
+
+function SearchRow({
+    value,
+    onChange,
+    onSearch,
+    className,
+    inputClassName,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    onSearch: () => void;
+    className: string;
+    inputClassName: string;
+}) {
+    return (
+        <div className={className}>
+            <Input
+                className={inputClassName}
+                placeholder="Search documents..."
+                value={value}
+                onChange={(_, d) => onChange(d.value)}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                contentBefore={<Search24Regular />}
+            />
+            <Button onClick={onSearch}>Search</Button>
+        </div>
+    );
+}
+
+function DocumentActions({ onDelete, onOpenMenu }: { onDelete: (e: React.MouseEvent) => void; onOpenMenu: (e: React.MouseEvent) => void }) {
+    return (
+        <Menu>
+            <MenuTrigger disableButtonEnhancement>
+                <Button appearance="subtle" icon={<MoreVertical24Regular />} onClick={onOpenMenu} />
+            </MenuTrigger>
+            <MenuPopover>
+                <MenuList>
+                    <MenuItem icon={<Delete24Regular />} onClick={onDelete}>
+                        Delete
+                    </MenuItem>
+                </MenuList>
+            </MenuPopover>
+        </Menu>
+    );
+}
+
+function DocumentCard({ d, onOpen, onDelete, className, contentClassName }: {
+    d: DocumentItem;
+    onOpen: () => void;
+    onDelete: () => void;
+    className: string;
+    contentClassName: string;
+}) {
+    const stop = (e: React.MouseEvent) => e.stopPropagation();
+    const updated = useMemo(() => new Date(d.update_time).toLocaleDateString(), [d.update_time]);
+    return (
+        <Card className={className} onClick={onOpen}>
+            <CardHeader
+                header={<Body1>{d.name}</Body1>}
+                action={<DocumentActions onDelete={(e) => { stop(e); onDelete(); }} onOpenMenu={stop} />}
+            />
+            <div className={contentClassName}>
+                <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{d.description || ""}</Caption1>
+                <div style={{ marginTop: 8, color: tokens.colorNeutralForeground4 }}>
+                    <Caption1>Updated: {updated}</Caption1>
+                </div>
+            </div>
+        </Card>
+    );
+}
 
 export function DocumentListPage() {
     const styles = useStyles();
@@ -48,63 +121,35 @@ export function DocumentListPage() {
         loadDocuments(search ? { search } : undefined);
     }, [search]);
 
+    const handleSearch = () => loadDocuments(search ? { search } : undefined);
+    const handleOpen = (id: number) => navigate(`/documents/${id}`);
+    const handleDelete = (id: number) => delWithToast(() => deleteDocument(id));
+
     return (
         <div className={styles.container}>
             <Toaster />
             <div className={styles.header}>
                 <Title3>Documents</Title3>
-                {/* Navigation removed per request */}
             </div>
-            <div className={styles.searchBar}>
-                <Input
-                    className={styles.searchInput}
-                    placeholder="Search documents..."
-                    value={search}
-                    onChange={(_, d) => setSearch(d.value)}
-                    onKeyDown={(e) => e.key === "Enter" && loadDocuments(search ? { search } : undefined)}
-                    contentBefore={<Search24Regular />}
-                />
-                <Button onClick={() => loadDocuments(search ? { search } : undefined)}>Search</Button>
-            </div>
-            {loading ? (
-                <Spinner label="Loading..." />
-            ) : (
+            <SearchRow
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+                className={styles.searchBar}
+                inputClassName={styles.searchInput}
+            />
+            {loading && <Spinner label="Loading..." />}
+            {!loading && (
                 <div className={styles.grid}>
                     {documents.map((d) => (
-                        <Card
+                        <DocumentCard
                             key={d.document_id}
+                            d={d}
                             className={styles.card}
-                            onClick={() => navigate(`/documents/${d.document_id}`)}
-                        >
-                            <CardHeader
-                                header={<Body1>{d.name}</Body1>}
-                                action={
-                                    <Menu>
-                                        <MenuTrigger disableButtonEnhancement>
-                                            <Button appearance="subtle" icon={<MoreVertical24Regular />} />
-                                        </MenuTrigger>
-                                        <MenuPopover>
-                                            <MenuList>
-                                                <MenuItem
-                                                    icon={<Delete24Regular />}
-                                                    onClick={() => delWithToast(() => deleteDocument(d.document_id))}
-                                                >
-                                                    Delete
-                                                </MenuItem>
-                                            </MenuList>
-                                        </MenuPopover>
-                                    </Menu>
-                                }
-                            />
-                            <div className={styles.cardContent}>
-                                <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                                    {d.description || ""}
-                                </Caption1>
-                                <div style={{ marginTop: 8, color: tokens.colorNeutralForeground4 }}>
-                                    <Caption1>Updated: {new Date(d.update_time).toLocaleDateString()}</Caption1>
-                                </div>
-                            </div>
-                        </Card>
+                            contentClassName={styles.cardContent}
+                            onOpen={() => handleOpen(d.document_id)}
+                            onDelete={() => handleDelete(d.document_id)}
+                        />
                     ))}
                 </div>
             )}

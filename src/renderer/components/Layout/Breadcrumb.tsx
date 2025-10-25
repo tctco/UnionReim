@@ -69,7 +69,7 @@ export function AppBreadcrumb() {
             if (path === '/documents/new') {
                 pathSegments.push({ label: 'New Document', path: '/documents/new' });
             } else if (path.match(/\/documents\/\d+$/)) {
-                pathSegments.push({ label: 'View Document', path: path });
+                pathSegments.push({ label: 'Edit Document', path: path });
             }
         }
 

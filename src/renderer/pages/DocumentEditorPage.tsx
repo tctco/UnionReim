@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import QuillEditor from "../components/Common/QuillEditor";
 import { useDocument, useDocumentTemplates } from "../hooks/useDocuments";
+import { useSaveHandler } from "../utils/toastHelpers";
+import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 
 const useStyles = makeStyles({
     container: { padding: "24px", maxWidth: "1000px", margin: "0 auto" },
@@ -24,6 +26,12 @@ export function DocumentEditorPage() {
     const documentId = isNew ? null : parseInt(id || "0");
     const { document, loading } = useDocument(documentId);
     const { createDocument, updateDocument } = useDocumentTemplates();
+    const saveWithToast = useSaveHandler({
+        successTitle: "保存成功",
+        successMessage: "文档已保存",
+        errorTitle: "保存失败",
+        errorMessage: "无法保存文档",
+    });
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -38,14 +46,26 @@ export function DocumentEditorPage() {
     }, [document]);
 
     const handleSave = async () => {
+        if (!name.trim()) {
+            // Surface validation via toast helper as an error path
+            await saveWithToast(async () => {
+                throw new Error("名称不能为空");
+            });
+            return;
+        }
+
         if (isNew) {
-            const created = await createDocument({ name, description, content_html: html });
-            navigate(`/documents/${created.document_id}`);
+            const created = await saveWithToast(() => createDocument({ name, description, content_html: html }));
+            if (created && (created as any).document_id) {
+                navigate(`/documents/${(created as any).document_id}`);
+            }
             return;
         }
         if (documentId) {
-            const updated = await updateDocument({ document_id: documentId, name, description, content_html: html });
-            navigate(`/documents/${updated.document_id}`);
+            const updated = await saveWithToast(() => updateDocument({ document_id: documentId, name, description, content_html: html }));
+            if (updated && (updated as any).document_id) {
+                navigate(`/documents/${(updated as any).document_id}`);
+            }
         }
     };
 
@@ -79,9 +99,9 @@ export function DocumentEditorPage() {
             </div>
             <div className={styles.section}>
                 <div style={{ marginBottom: 8, color: tokens.colorNeutralForeground3 }}>
-                    支持占位符：{`{userName}`}、{`{studentId}`}、{`{date}`} 等。可在项目中进一步补充。
+                    支持占位符：{formatWatermarkPlaceholderList()}
                 </div>
-                <QuillEditor valueHtml={html} onHtmlChange={setHtml} />
+                <QuillEditor initialHtml={html} onHtmlChange={setHtml} />
             </div>
         </div>
     );
