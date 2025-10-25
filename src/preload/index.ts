@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
     // System utilities
     system: {
         selectDirectory: () => ipcRenderer.invoke('system:selectDirectory'),
+        resolveStoragePath: (relative: string) => ipcRenderer.invoke('system:resolveStoragePath', relative),
+        openPath: (absPath: string) => ipcRenderer.invoke('system:openPath', absPath),
     },
 
     // Template operations
@@ -84,5 +86,24 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
     // Fonts operations
     fonts: {
         list: () => ipcRenderer.invoke('fonts:list'),
+    },
+
+    // Document template operations
+    document: {
+        create: (request) => ipcRenderer.invoke('document:create', request),
+        list: (filter) => ipcRenderer.invoke('document:list', filter),
+        get: (document_id) => ipcRenderer.invoke('document:get', document_id),
+        update: (request) => ipcRenderer.invoke('document:update', request),
+        delete: (document_id) => ipcRenderer.invoke('document:delete', document_id),
+    },
+
+    // Project document operations
+    projectDocument: {
+        create: (request) => ipcRenderer.invoke('projectDocument:create', request),
+        list: (project_id) => ipcRenderer.invoke('projectDocument:list', project_id),
+        get: (project_document_id) => ipcRenderer.invoke('projectDocument:get', project_document_id),
+        update: (request) => ipcRenderer.invoke('projectDocument:update', request),
+        delete: (project_document_id) => ipcRenderer.invoke('projectDocument:delete', project_document_id),
+        exportPdf: (project_document_id) => ipcRenderer.invoke('projectDocument:exportPdf', project_document_id),
     },
 });

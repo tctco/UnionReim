@@ -16,6 +16,9 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { TemplateListPage } from "./pages/TemplateListPage";
 import { TemplateViewPage } from "./pages/TemplateViewPage";
+import { DocumentListPage } from "./pages/DocumentListPage";
+import { DocumentEditorPage } from "./pages/DocumentEditorPage";
+import { ProjectDocumentEditorPage } from "./pages/ProjectDocumentEditorPage";
 
 const shouldUseDarkColors = (): boolean => window.ContextBridge.themeShouldUseDarkColors();
 
@@ -69,11 +72,15 @@ export const App = () => {
                     <Route path="/templates/new" element={<TemplateEditorPage />} />
                     <Route path="/templates/:id" element={<TemplateViewPage />} />
                     <Route path="/templates/:id/edit" element={<TemplateEditorPage />} />
+                    <Route path="/documents" element={<DocumentListPage />} />
+                    <Route path="/documents/new" element={<DocumentEditorPage />} />
+                    <Route path="/documents/:id" element={<DocumentEditorPage />} />
                     <Route path="/projects" element={<ProjectListPage />} />
                     <Route path="/projects/new" element={<ProjectEditorPage />} />
                     <Route path="/projects/:id" element={<ProjectPreviewPage />} />
                     <Route path="/projects/:id/print" element={<PrintPreviewPage />} />
                     <Route path="/projects/:id/edit" element={<ProjectEditorPage />} />
+                    <Route path="/projects/:pid/documents/:pdid/edit" element={<ProjectDocumentEditorPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to="/templates" replace />} />
                 </Routes>

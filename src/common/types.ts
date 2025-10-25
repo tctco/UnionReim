@@ -104,6 +104,8 @@ export interface WatermarkSettings {
 // Settings related types
 export interface AppSettings {
     defaultUserName?: string;
+    studentId?: string;
+    signatureImagePath?: string; // absolute path to signature image
     theme?: 'light' | 'dark' | 'system';
     defaultStoragePath?: string;
     language?: string;
@@ -268,4 +270,50 @@ export interface ProjectFilter {
     search?: string;
     status?: string;
     template_id?: number;
+}
+
+// Document templates (free-form text with placeholders)
+export interface DocumentTemplate {
+    document_id: number;
+    name: string;
+    description?: string;
+    content_html: string; // stored HTML from Quill
+    create_time: number;
+    update_time: number;
+}
+
+// Project-specific document (instance from a template)
+export interface ProjectDocument {
+    project_document_id: number;
+    project_id: number;
+    name: string;
+    content_html: string;
+    pdf_path?: string; // relative to storage root after export
+    create_time: number;
+    update_time: number;
+}
+
+export interface CreateDocumentTemplateRequest {
+    name: string;
+    description?: string;
+    content_html?: string;
+}
+
+export interface UpdateDocumentTemplateRequest {
+    document_id: number;
+    name?: string;
+    description?: string;
+    content_html?: string;
+}
+
+export interface CreateProjectDocumentRequest {
+    project_id: number;
+    name: string;
+    content_html: string;
+}
+
+export interface UpdateProjectDocumentRequest {
+    project_document_id: number;
+    name?: string;
+    content_html?: string;
 }

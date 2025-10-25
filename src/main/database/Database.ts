@@ -84,6 +84,28 @@ CREATE INDEX IF NOT EXISTS idx_projects_template ON projects(template_id);
 CREATE INDEX IF NOT EXISTS idx_project_items_project ON project_items(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_items_template ON project_items(template_item_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_project_item ON attachments(project_item_id);
+
+-- Document templates table: stores free-form document templates
+CREATE TABLE IF NOT EXISTS documents (
+    document_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    content_html TEXT NOT NULL,
+    create_time INTEGER NOT NULL,
+    update_time INTEGER NOT NULL
+);
+
+-- Project documents table: documents attached to a project
+CREATE TABLE IF NOT EXISTS project_documents (
+    project_document_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    content_html TEXT NOT NULL,
+    pdf_path TEXT,
+    create_time INTEGER NOT NULL,
+    update_time INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE
+);
 `;
 
 export class DatabaseService {
@@ -156,7 +178,17 @@ export class DatabaseService {
             }
         }
 
-        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 1)}`);
+        // Migration 2: Ensure documents tables exist (no-op if created by SCHEMA_SQL)
+        if (currentVersion < 2) {
+            try {
+                // just record version, tables are created via SCHEMA_SQL above
+                this.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(2, Date.now());
+            } catch (error) {
+                console.error('Migration 2 failed:', error);
+            }
+        }
+
+        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 2)}`);
     }
 
     public getDatabase(): Database.Database {
@@ -177,4 +209,3 @@ export class DatabaseService {
         return fn();
     }
 }
-

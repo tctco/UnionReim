@@ -2,7 +2,6 @@ import { BrowserWindow, app, ipcMain, nativeTheme, protocol, type IpcMainEvent }
 import { join } from "path";
 import { SettingsService } from "./services/SettingsService";
 import { registerIpcHandlers } from "./ipc/handlers";
-import { DEFAULT_STORAGE_SUBPATH } from "@common/constants";
 import { DEFAULT_STORAGE_PATH } from "./electronConfigs";
 import { join as pathJoin, normalize as pathNormalize } from "path";
 

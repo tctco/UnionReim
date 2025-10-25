@@ -1,11 +1,14 @@
 import type {
     AppSettings,
     Attachment,
+    CreateDocumentTemplateRequest,
     CreateProjectRequest,
+    CreateProjectDocumentRequest,
     CreateTemplateItemRequest,
     CreateTemplateRequest,
     MultipleTemplateExportRequest,
     Project,
+    ProjectDocument,
     ProjectWithDetails,
     SafeDeleteResult,
     SettingsUpdateRequest,
@@ -15,7 +18,9 @@ import type {
     TemplateItem,
     TemplateModificationCheckResult,
     TemplateWithItems,
+    DocumentTemplate,
     UpdateProjectRequest,
+    UpdateProjectDocumentRequest,
     UpdateTemplateItemRequest,
     UpdateTemplateRequest,
 } from "./types";
@@ -113,5 +118,26 @@ export type ContextBridge = {
     // System utilities
     system: {
         selectDirectory: () => Promise<ApiResponse<string | null>>;
+        resolveStoragePath: (relative: string) => Promise<ApiResponse<string>>;
+        openPath: (absPath: string) => Promise<ApiResponse<boolean>>;
+    };
+
+    // Document template operations
+    document: {
+        create: (request: CreateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
+        list: (filter?: { search?: string }) => Promise<ApiResponse<DocumentTemplate[]>>;
+        get: (document_id: number) => Promise<ApiResponse<DocumentTemplate>>;
+        update: (request: UpdateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
+        delete: (document_id: number) => Promise<ApiResponse<boolean>>;
+    };
+
+    // Project document operations
+    projectDocument: {
+        create: (request: CreateProjectDocumentRequest) => Promise<ApiResponse<ProjectDocument>>;
+        list: (project_id: number) => Promise<ApiResponse<ProjectDocument[]>>;
+        get: (project_document_id: number) => Promise<ApiResponse<ProjectDocument>>;
+        update: (request: UpdateProjectDocumentRequest) => Promise<ApiResponse<ProjectDocument>>;
+        delete: (project_document_id: number) => Promise<ApiResponse<boolean>>;
+        exportPdf: (project_document_id: number) => Promise<ApiResponse<string>>; // returns relative path
     };
 };

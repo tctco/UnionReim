@@ -51,6 +51,7 @@ export function NavigationSidebar() {
 
     const getCurrentTab = () => {
         if (location.pathname.startsWith("/projects")) return "projects";
+        if (location.pathname.startsWith("/documents")) return "documents";
         if (location.pathname.startsWith("/settings")) return "settings";
         return "templates";
     };
@@ -62,6 +63,8 @@ export function NavigationSidebar() {
             navigate("/templates");
         } else if (value === "projects") {
             navigate("/projects");
+        } else if (value === "documents") {
+            navigate("/documents");
         } else if (value === "settings") {
             navigate("/settings");
         }
@@ -93,6 +96,9 @@ export function NavigationSidebar() {
             >
                 <Tab value="projects" icon={<Folder24Regular />}>
                     {!isCollapsed && "Projects"}
+                </Tab>
+                <Tab value="documents" icon={<DocumentMultiple24Regular />}>
+                    {!isCollapsed && "Documents"}
                 </Tab>
                 <Tab value="templates" icon={<DocumentMultiple24Regular />}>
                     {!isCollapsed && "Templates"}

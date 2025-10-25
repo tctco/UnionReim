@@ -23,6 +23,7 @@ import { TemplateService } from "../services/TemplateService";
 import { WatermarkService } from "../services/WatermarkService";
 import { PrintService } from "../services/PrintService";
 import { basename } from "path";
+import { DocumentService } from "../services/DocumentService";
 
 export function registerIpcHandlers(): void {
     const settingsService = new SettingsService();
@@ -32,6 +33,7 @@ export function registerIpcHandlers(): void {
     const watermarkService = new WatermarkService();
     const exportImportService = new ExportImportService();
     const printService = new PrintService();
+    const documentService = new DocumentService();
 
     // Settings handlers
     ipcMain.handle("settings:get", respond(() => settingsService.getAppSettings()));
@@ -359,4 +361,51 @@ export function registerIpcHandlers(): void {
         await printService.printFile(file_path);
         return true;
     }, { successFromBoolean: true }));
+
+    // System helpers
+    ipcMain.handle("system:resolveStoragePath", respond((relative: string) => {
+        const { join } = require('path');
+        return join(attachmentService.getStoragePath(), relative);
+    }));
+    ipcMain.handle("system:openPath", respond(async (absPath: string) => {
+        await shell.openPath(absPath);
+        return true;
+    }, { successFromBoolean: true }));
+
+    // Document template handlers
+    ipcMain.handle("document:create", respond((req: import("@common/types").CreateDocumentTemplateRequest) => documentService.createTemplate(req)));
+    ipcMain.handle("document:list", respond((filter?: { search?: string }) => documentService.listTemplates(filter)));
+    ipcMain.handle("document:get", respond((document_id: number) => {
+        const doc = documentService.getTemplate(document_id);
+        if (!doc) throw new Error("Document not found");
+        return doc;
+    }));
+    ipcMain.handle("document:update", respond((req: import("@common/types").UpdateDocumentTemplateRequest) => {
+        const updated = documentService.updateTemplate(req);
+        if (!updated) throw new Error("Document not found");
+        return updated;
+    }));
+    ipcMain.handle("document:delete", respond((document_id: number) => documentService.deleteTemplate(document_id), { successFromBoolean: true }));
+
+    // Project document handlers
+    ipcMain.handle("projectDocument:create", respond((req: import("@common/types").CreateProjectDocumentRequest) => documentService.createProjectDocument(req)));
+    ipcMain.handle("projectDocument:list", respond((project_id: number) => documentService.listProjectDocuments(project_id)));
+    ipcMain.handle("projectDocument:get", respond((project_document_id: number) => {
+        const d = documentService.getProjectDocument(project_document_id);
+        if (!d) throw new Error("Project document not found");
+        return d;
+    }));
+    ipcMain.handle("projectDocument:update", respond((req: import("@common/types").UpdateProjectDocumentRequest) => {
+        const d = documentService.updateProjectDocument(req);
+        if (!d) throw new Error("Project document not found");
+        return d;
+    }));
+    ipcMain.handle("projectDocument:delete", respond((project_document_id: number) => documentService.deleteProjectDocument(project_document_id), { successFromBoolean: true }));
+    ipcMain.handle("projectDocument:exportPdf", respond(async (project_document_id: number) => {
+        const d = documentService.getProjectDocument(project_document_id);
+        if (!d) throw new Error("Project document not found");
+        const rel = await printService.htmlToPdfForProject(d.project_id, d.name, d.content_html);
+        documentService.setProjectDocumentPdfPath(project_document_id, rel);
+        return rel;
+    }));
 }

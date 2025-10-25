@@ -57,6 +57,19 @@ export function AppBreadcrumb() {
                 const projectId = path.match(/\/projects\/(\d+)\/print$/)?.[1];
                 pathSegments.push({ label: 'Project Preview', path: `/projects/${projectId}` });
                 pathSegments.push({ label: 'Print', path: path });
+            } else if (path.match(/\/projects\/\d+\/documents\/\d+\/edit$/)) {
+                const m = path.match(/\/projects\/(\d+)\/documents\/(\d+)\/edit$/);
+                const projectId = m?.[1];
+                pathSegments.push({ label: 'Project Preview', path: `/projects/${projectId}` });
+                pathSegments.push({ label: 'Documents', path: `/projects/${projectId}/edit` });
+                pathSegments.push({ label: 'Edit Document', path: path });
+            }
+        } else if (path.startsWith('/documents')) {
+            pathSegments.push({ label: 'Documents', path: '/documents' });
+            if (path === '/documents/new') {
+                pathSegments.push({ label: 'New Document', path: '/documents/new' });
+            } else if (path.match(/\/documents\/\d+$/)) {
+                pathSegments.push({ label: 'View Document', path: path });
             }
         }
 

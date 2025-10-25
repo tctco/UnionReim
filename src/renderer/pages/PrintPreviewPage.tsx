@@ -1,8 +1,7 @@
-import { Button, Spinner, Title1, makeStyles, tokens } from "@fluentui/react-components";
+import { Spinner, makeStyles, tokens } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { toReimbursementUrlFromRelative } from "@common/urlHelpers";
-import { AppBreadcrumb } from "../components/Layout/Breadcrumb";
 
 const useStyles = makeStyles({
   container: {
@@ -31,7 +30,6 @@ const useStyles = makeStyles({
 export function PrintPreviewPage() {
   const styles = useStyles();
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const projectId = parseInt(id || "0", 10);
 
   const [relativePath, setRelativePath] = useState<string | null>(null);

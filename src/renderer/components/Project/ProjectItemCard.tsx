@@ -1,6 +1,6 @@
 import type { Attachment, ProjectItemWithDetails } from "@common/types";
 import { Badge, Body1, Button, Caption1, Card, tokens } from "@fluentui/react-components";
-import { ArrowUpload24Regular, DocumentRegular } from "@fluentui/react-icons";
+import { ArrowUpload24Regular, DocumentRegular, DocumentAdd24Regular } from "@fluentui/react-icons";
 import React from "react";
 import AttachmentRowActions from "./AttachmentRowActions";
 import { isAllowedAttachmentName } from "@common/constants";
@@ -29,6 +29,7 @@ export default function ProjectItemCard(props: {
   onWatermark: (a: Attachment) => void;
   onRemoveWatermark: (a: Attachment) => void;
   onDelete: (a: Attachment) => void;
+  onAddFromDocument?: (project_item_id: number) => void;
   classes: { itemCard: string; itemHeader: string; attachmentList: string; attachmentItem: string };
 }) {
   const {
@@ -49,6 +50,7 @@ export default function ProjectItemCard(props: {
     onDelete,
     onRemoveWatermark,
     classes,
+    onAddFromDocument,
   } = props;
 
 
@@ -90,7 +92,12 @@ export default function ProjectItemCard(props: {
             <Badge color="informative" style={{ marginLeft: 8 }}>Watermark</Badge>
           )}
         </div>
-        <Button icon={<ArrowUpload24Regular />} onClick={() => onUploadClick(item)}>Upload</Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {onAddFromDocument && (
+            <Button icon={<DocumentAdd24Regular />} onClick={() => onAddFromDocument(item.project_item_id)}>Document</Button>
+          )}
+          <Button icon={<ArrowUpload24Regular />} onClick={() => onUploadClick(item)}>Upload</Button>
+        </div>
       </div>
 
       {item.template_item.description && (

@@ -1,6 +1,5 @@
 import type { Template } from "@common/types";
 import { Button, Field, Input, Textarea, Title3 } from "@fluentui/react-components";
-import React from "react";
 
 /**
  * NewProjectMetadataForm

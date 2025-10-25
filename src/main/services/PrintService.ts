@@ -4,6 +4,7 @@ import { basename, join } from 'path';
 import { BrowserWindow } from 'electron';
 import { AttachmentService } from './AttachmentService';
 import { ProjectService } from './ProjectService';
+// (imports already declared above)
 
 const A4_WIDTH_PT = 595.28; // 210mm at 72 DPI
 const A4_HEIGHT_PT = 841.89; // 297mm at 72 DPI
@@ -127,5 +128,28 @@ export class PrintService {
         setTimeout(() => { if (!win.isDestroyed()) win.close(); }, 100);
       });
     });
+  }
+
+  /**
+   * Render given HTML string to a PDF and save under the project's folder.
+   * Returns relative path under storage root.
+   */
+  async htmlToPdfForProject(project_id: number, name: string, html: string): Promise<string> {
+    const win = new BrowserWindow({ show: false });
+    const content = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    await win.loadURL(content);
+    const pdf = await win.webContents.printToPDF({ printBackground: true, marginsType: 1 });
+    setTimeout(() => { try { if (!win.isDestroyed()) win.close(); } catch {} }, 100);
+
+    const storageRoot = this.attachmentService.getStoragePath();
+    const outDir = join(storageRoot, String(project_id), 'documents');
+    if (!existsSync(outDir)) {
+      try { mkdirSync(outDir, { recursive: true }); } catch {}
+    }
+    const safe = (name || 'document').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '_');
+    const outPath = join(outDir, `${safe}.pdf`);
+    writeFileSync(outPath, pdf);
+    const rel = join(String(project_id), 'documents', `${safe}.pdf`);
+    return rel;
   }
 }

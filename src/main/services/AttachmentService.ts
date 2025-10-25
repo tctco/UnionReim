@@ -1,11 +1,9 @@
 import type { Attachment } from "@common/types";
 import type Database from "better-sqlite3";
-import { app } from "electron";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, renameSync, writeFileSync, readdirSync, statSync, rmSync } from "fs";
 import { basename, extname, join, dirname } from "path";
 import { DatabaseService } from "../database/Database";
 import { SettingsService } from "./SettingsService";
-import { DEFAULT_STORAGE_SUBPATH } from "@common/constants";
 import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 
 export class AttachmentService {

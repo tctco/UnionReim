@@ -316,7 +316,9 @@ export function SettingsPage() {
                     <AccordionPanel>
                     <UserSettingsPanel
                         defaultUserName={formData.defaultUserName}
-                        onChange={(name) => setFormData({ ...formData, defaultUserName: name })}
+                        studentId={formData.studentId}
+                        signatureImagePath={formData.signatureImagePath}
+                        onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
                     </AccordionPanel>
                 </AccordionItem>

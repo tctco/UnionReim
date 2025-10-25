@@ -24,7 +24,9 @@ import TemplateSelectorGrid from "../components/Template/TemplateSelectorGrid";
 import NewProjectMetadataForm from "../components/Project/NewProjectMetadataForm";
 import FileUploader from "../components/Common/FileUploader";
 import ProjectItemCard from "../components/Project/ProjectItemCard";
+import DocumentFromTemplateDialog from "../components/Project/DocumentFromTemplateDialog";
 import { useProject, useProjects } from "../hooks/useProjects";
+import { useDocumentTemplates, useProjectDocuments } from "../hooks/useDocuments";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
 
@@ -96,8 +98,10 @@ export function ProjectEditorPage() {
     const projectId = isNew ? null : parseInt(id || "0");
 
     const { templates } = useTemplates();
+    const { documents } = useDocumentTemplates();
     const { createProject, updateProject } = useProjects();
     const { project, loading, loadProject, checkComplete } = useProject(projectId);
+    const { docs: projectDocs, load: loadProjectDocs, create: createProjectDoc, remove: removeProjectDoc } = useProjectDocuments(projectId);
     const { uploadAttachment, deleteAttachment, applyWatermark, applyWatermarkWithOptions, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
     const { dispatchToast } = useToastController();
 
@@ -116,6 +120,10 @@ export function ProjectEditorPage() {
             setStatus(project.status as 'incomplete' | 'complete' | 'exported');
         }
     }, [project]);
+
+    useEffect(() => {
+        if (projectId) loadProjectDocs(projectId);
+    }, [projectId, loadProjectDocs]);
 
     // Load default user name for new projects
     useEffect(() => {
@@ -361,6 +369,14 @@ export function ProjectEditorPage() {
         }
     };
 
+    // Document-from-template dialog state
+    const [docDialogOpen, setDocDialogOpen] = useState(false);
+    const [docTargetItemId, setDocTargetItemId] = useState<number | null>(null);
+    const openDocDialog = (project_item_id: number) => {
+        setDocTargetItemId(project_item_id);
+        setDocDialogOpen(true);
+    };
+
     if (loading) {
         return (
             <div className={styles.container}>
@@ -492,6 +508,7 @@ export function ProjectEditorPage() {
                                     onWatermark={handleWatermark}
                                     onRemoveWatermark={handleRemoveWatermark}
                                     onDelete={handleDeleteClick}
+                                    onAddFromDocument={(pid) => openDocDialog(pid)}
                                     classes={{
                                         itemCard: styles.itemCard,
                                         itemHeader: styles.itemHeader,
@@ -549,6 +566,16 @@ export function ProjectEditorPage() {
                     setWmAttachment(null);
                     if (projectId) await loadProject(projectId);
                 }}
+            />
+
+            <DocumentFromTemplateDialog
+                open={docDialogOpen}
+                onOpenChange={setDocDialogOpen}
+                projectId={project?.project_id || 0}
+                projectItemId={docTargetItemId || 0}
+                projectName={project?.name}
+                projectCreator={project?.creator}
+                onUploaded={async () => { if (projectId) await loadProject(projectId); }}
             />
         </div>
     );

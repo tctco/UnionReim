@@ -1,6 +1,4 @@
 import type Database from "better-sqlite3";
-import { app } from "electron";
-import { join } from "path";
 import { DatabaseService } from "../database/Database";
 import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 import type { AppSettings, WatermarkSettings } from "@common/types";
@@ -22,6 +20,7 @@ export class SettingsService {
             hoverPreviewHeight: 400,
             // Default to a single resolved path constant in main
             defaultStoragePath: DEFAULT_STORAGE_PATH,
+            // optional: defaultUserName, studentId, signatureImagePath are not set here
             watermark: {
                 textMode: 'template',
                 fontFamily: 'Arial',
@@ -127,6 +126,8 @@ export class SettingsService {
 
         return {
             defaultUserName: allSettings.defaultUserName || undefined,
+            studentId: allSettings.studentId || undefined,
+            signatureImagePath: allSettings.signatureImagePath || undefined,
             theme: (allSettings.theme as 'light' | 'dark' | 'system') || 'system',
             defaultStoragePath: allSettings.defaultStoragePath || undefined,
             language: allSettings.language || 'zh-CN',
