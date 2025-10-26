@@ -6,6 +6,7 @@ export type WatermarkPlaceholder = {
 
 export const WATERMARK_PLACEHOLDERS: readonly WatermarkPlaceholder[] = [
   { token: "{userName}", label: "User Name", description: "Project creator name" },
+  { token: "{studentId}", label: "Student ID", description: "User student ID" },
   { token: "{itemName}", label: "Item Name", description: "Template item name" },
   { token: "{projectName}", label: "Project Name", description: "Project name" },
   { token: "{date}", label: "Date", description: "Current date (locale)" },

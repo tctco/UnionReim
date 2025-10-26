@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 import { Toast, ToastTitle, ToastBody, useToastController } from "@fluentui/react-components";
 
+// A single global toaster id so toasts survive route changes
+export const GLOBAL_TOASTER_ID = "app-global-toaster";
+
 export interface ToastConfig {
   successTitle?: string;
   successMessage?: string;
@@ -23,7 +26,7 @@ export interface AsyncOperationResult<T = unknown> {
  * - Otherwise, we treat the return value as the operation result and show a success toast.
  */
 export function useToastHandler(toastConfig: ToastConfig) {
-  const { dispatchToast } = useToastController();
+  const { dispatchToast } = useToastController(GLOBAL_TOASTER_ID);
 
   return useCallback(
     async <T extends unknown[], R>(
@@ -110,4 +113,3 @@ export function useUpdateHandler(config?: Partial<ToastConfig>) {
     ...config,
   });
 }
-

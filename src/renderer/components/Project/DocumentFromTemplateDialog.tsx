@@ -8,7 +8,6 @@ import {
     DialogSurface,
     DialogTitle,
     Field,
-    Input,
     Select,
     Spinner,
     makeStyles,
@@ -21,7 +20,7 @@ const useStyles = makeStyles({
     layout: { display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "stretch" },
     form: { display: "grid", gap: "8px" },
     preview: {
-        padding: '8px',
+        padding: "8px",
         background: tokens.colorNeutralBackground1,
     },
 });
@@ -61,7 +60,6 @@ export default function DocumentFromTemplateDialog(props: {
         [templates, selectedId],
     );
 
-    const placeholders = useMemo(() => (baseHtml ? extractPlaceholders(baseHtml) : []), [baseHtml]);
     const previewHtml = useMemo(() => apply(baseHtml, values), [baseHtml, values]);
 
     useEffect(() => {
@@ -153,21 +151,15 @@ export default function DocumentFromTemplateDialog(props: {
                                         ))}
                                     </Select>
                                 </Field>
-                                {placeholders.length > 0 && (
-                                    <div style={{ display: "grid", gap: 8 }}>
-                                        {placeholders.map((k) => (
-                                            <Field key={k} label={k}>
-                                                <Input
-                                                    value={values[k] || ""}
-                                                    onChange={(_, d) => setValues((v) => ({ ...v, [k]: d.value }))}
-                                                />
-                                            </Field>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                             <div className={styles.preview}>
-                                <QuillEditor initialHtml={previewHtml} minHeight={420} />
+                                <QuillEditor
+                                    key={(selectedId || "").length + (baseHtml || "").length}
+                                    initialHtml={previewHtml}
+                                    minHeight={420}
+                                    // readOnly
+                                    // showToolbar={false}
+                                />
                             </div>
                         </div>
                     </DialogContent>

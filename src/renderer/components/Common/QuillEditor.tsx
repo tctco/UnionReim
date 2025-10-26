@@ -2,12 +2,8 @@ import { Spinner } from "@fluentui/react-components";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-    QUILL_CN_FONT_SIZES,
-    QUILL_DEFAULT_FONT_FAMILY,
-    QUILL_DEFAULT_FONT_SIZE_PX,
-    QUILL_NUMERIC_FONT_SIZES,
-} from "../../../common/constants";
+import { QUILL_DEFAULT_FONT_FAMILY, QUILL_DEFAULT_FONT_SIZE_PX } from "../../../common/constants";
+import { getFontKeysAndCss, getSizeTokensAndCss, DEFAULT_FONT_FAMILIES } from "../../../common/quillStyle";
 
 type QuillEditorProps = {
     readOnly?: boolean;
@@ -45,21 +41,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     const res = await (window as any).ContextBridge?.fonts?.list?.();
                     const available: string[] =
                         res && res.success && Array.isArray(res.data) ? (res.data as string[]) : [];
-                    const preferred = [
-                        "Arial",
-                        "Times New Roman",
-                        "Courier New",
-                        "Calibri",
-                        "Microsoft YaHei",
-                        "SimSun",
-                        "SimHei",
-                        "PingFang SC",
-                        "Songti SC",
-                        "Helvetica",
-                        "Georgia",
-                        "Tahoma",
-                        "Verdana",
-                    ];
+                    const preferred = DEFAULT_FONT_FAMILIES;
                     const chosen: string[] = [];
                     for (const p of preferred) if (available.includes(p)) chosen.push(p);
                     const max = 999;
@@ -69,24 +51,12 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     }
                     if (chosen.length === 0) chosen.push("Arial", "Times New Roman", "Courier New");
 
-                    const toKey = (name: string) => name.replace(/\s+/g, "-");
-                    const keys = chosen.map(toKey);
-
-                    // Generate CSS for toolbar labels and font application
-                    const css: string[] = [];
-                    for (let i = 0; i < chosen.length; i++) {
-                        const name = chosen[i];
-                        const key = keys[i];
-                        css.push(`.ql-font-${key}{font-family:"${name}"}`);
-                        css.push(
-                            `.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="${key}"]::before, .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="${key}"]::before{content:"${name}";font-family:"${name}"}`,
-                        );
-                    }
+                    const { keys, css } = getFontKeysAndCss(chosen, { includePickerLabels: true });
                     if (!styleTagRef.current) {
                         styleTagRef.current = document.createElement("style");
                         document.head.appendChild(styleTagRef.current);
                     }
-                    styleTagRef.current.textContent = css.join("\n");
+                    styleTagRef.current.textContent = css;
 
                     try {
                         const Font = Quill.import("formats/font") as any;
@@ -110,27 +80,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
 
         // Build size options with class-based tokens so CN and numeric sizes coexist
         useEffect(() => {
-            const cnSizes: Array<{ value: string; label: string }> = QUILL_CN_FONT_SIZES;
-            const numericSizes: string[] = [...QUILL_NUMERIC_FONT_SIZES];
-
-            // Create distinct tokens for CN and numeric sizes, both mapping to the same px via CSS classes.
-            // - CN tokens: cn-0, cn-1, ... (stable by order defined in constants)
-            // - Numeric tokens: n-10px, n-10_5px, ... ('.' replaced for safe CSS class names)
-            const cnEntries = cnSizes.map((s, idx) => ({
-                token: `cn-${idx}`,
-                px: s.value,
-                cnLabel: s.label,
-                numLabel: s.value.replace("px", ""),
-            }));
-            const numEntries = numericSizes.map((v) => ({
-                token: `n-${v.replace(".", "_")}`,
-                px: v,
-                cnLabel: "",
-                numLabel: v.replace("px", ""),
-            }));
-
-            const allEntries = [...cnEntries, ...numEntries];
-            const tokens = allEntries.map((e) => e.token);
+            const { tokens, pxToToken, css } = getSizeTokensAndCss({ includePickerLabels: true });
 
             // Register class attributor so tokens are emitted as classes and resolved by CSS
             try {
@@ -150,30 +100,17 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             }
 
             setSizeKeys(tokens);
-            // Build reverse map for clipboard matching (px -> token)
-            const pxToToken: Record<string, string> = {};
-            for (const e of allEntries) pxToToken[e.px] = e.token;
             sizePxToTokenRef.current = pxToToken;
 
-            // Inject CSS: map each token to its px size, and add human-friendly labels in the picker
-            const css: string[] = [];
-            for (const e of allEntries) {
-                css.push(`.ql-size-${e.token}{font-size:${e.px}}`);
-                const label = e.cnLabel ? e.cnLabel : e.numLabel;
-                css.push(
-                    `.ql-snow .ql-picker.ql-size .ql-picker-label[data-value=\"${e.token}\"]::before, .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=\"${e.token}\"]::before{content:\"${label}\"}`,
-                );
-            }
-            // Picker sizing and scroll behavior
-            css.push(`.ql-snow .ql-picker.ql-font { width: 160px; }`);
-            css.push(`.ql-snow .ql-picker.ql-size { width: 60px; }`);
-            css.push(`.ql-snow .ql-picker-label { max-width: 210px; overflow: hidden; text-overflow: ellipsis; }`);
-            css.push(
-                `.ql-snow .ql-picker.ql-font .ql-picker-options, .ql-snow .ql-picker.ql-size .ql-picker-options { max-height: 260px; overflow-y: auto; }`,
-            );
-
+            // Inject CSS: size token mapping + picker UX helpers
             const tag = document.createElement("style");
-            tag.textContent = css.join("\n");
+            tag.textContent = [
+                css,
+                `.ql-snow .ql-picker.ql-font { width: 160px; }`,
+                `.ql-snow .ql-picker.ql-size { width: 60px; }`,
+                `.ql-snow .ql-picker-label { max-width: 210px; overflow: hidden; text-overflow: ellipsis; }`,
+                `.ql-snow .ql-picker.ql-font .ql-picker-options, .ql-snow .ql-picker.ql-size .ql-picker-options { max-height: 260px; overflow-y: auto; }`,
+            ].join('\n');
             document.head.appendChild(tag);
             return () => {
                 try {
@@ -258,10 +195,8 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             // Initialize content
             if (initialHtmlRef.current) {
                 try {
-                    console.log('paste html', initialHtmlRef.current);
                     quill.clipboard.dangerouslyPasteHTML(initialHtmlRef.current);
                 } catch {
-                    console.log('set text', initialHtmlRef.current);
                     quill.setText(initialHtmlRef.current || "");
                 }
             }

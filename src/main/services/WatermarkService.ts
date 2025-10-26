@@ -118,8 +118,10 @@ export class WatermarkService {
         }
 
         // Replace placeholders via shared resolver
+        const appSettings = this.settingsService.getAppSettings();
         return resolveWatermarkTemplate(templateItem.watermark_template, {
             userName: project.creator || "User",
+            studentId: appSettings.studentId,
             itemName: templateItem.name,
             projectName: project.name,
             date: new Date().toLocaleDateString(),
@@ -217,3 +219,9 @@ export class WatermarkService {
 
     // PDF watermarking intentionally not supported in current version.
 }
+
+
+
+
+
+

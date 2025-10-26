@@ -69,3 +69,6 @@ export const QUILL_NUMERIC_FONT_SIZES = [
 // Quill editor defaults
 export const QUILL_DEFAULT_FONT_FAMILY = 'Arial';
 export const QUILL_DEFAULT_FONT_SIZE_PX = '14px';
+
+export const A4_WIDTH_PT = 595.28; // 210mm at 72 DPI
+export const A4_HEIGHT_PT = 841.89; // 297mm at 72 DPI

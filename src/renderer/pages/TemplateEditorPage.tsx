@@ -96,6 +96,7 @@ export function TemplateEditorPage() {
     const [creator, setCreator] = useState("");
     const [items, setItems] = useState<Partial<TemplateItem>[]>([]);
     const [deleteConfirmItem, setDeleteConfirmItem] = useState<TemplateItem | null>(null);
+    
 
     useEffect(() => {
         if (template) {

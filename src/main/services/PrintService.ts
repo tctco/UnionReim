@@ -4,10 +4,9 @@ import { basename, join } from 'path';
 import { BrowserWindow } from 'electron';
 import { AttachmentService } from './AttachmentService';
 import { ProjectService } from './ProjectService';
-// (imports already declared above)
-
-const A4_WIDTH_PT = 595.28; // 210mm at 72 DPI
-const A4_HEIGHT_PT = 841.89; // 297mm at 72 DPI
+import { buildRuntimeCssForHtmlRender } from '@common/quillStyle';
+import { getFonts } from 'font-list';
+import { A4_WIDTH_PT, A4_HEIGHT_PT } from '@common/constants';
 
 export class PrintService {
   private projectService: ProjectService;
@@ -133,12 +132,18 @@ export class PrintService {
   /**
    * Render given HTML string to a PDF and save under the project's folder.
    * Returns relative path under storage root.
-   */
+  */
   async htmlToPdfForProject(project_id: number, name: string, html: string): Promise<string> {
     const win = new BrowserWindow({ show: false });
-    const content = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+    let systemFonts: string[] = [];
+    try {
+      systemFonts = await getFonts({ disableQuoting: true });
+    } catch {}
+    const quillCss = buildRuntimeCssForHtmlRender(systemFonts, { noFontFallback: true });
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8" />\n<style>\n${quillCss}\n</style>\n</head><body>\n${html}\n</body></html>`;
+    const content = `data:text/html;charset=utf-8,${encodeURIComponent(fullHtml)}`;
     await win.loadURL(content);
-    const pdf = await win.webContents.printToPDF({ printBackground: true, marginsType: 1 });
+    const pdf = await win.webContents.printToPDF({ printBackground: true });
     setTimeout(() => { try { if (!win.isDestroyed()) win.close(); } catch {} }, 100);
 
     const storageRoot = this.attachmentService.getStoragePath();
@@ -152,4 +157,6 @@ export class PrintService {
     const rel = join(String(project_id), 'documents', `${safe}.pdf`);
     return rel;
   }
+
+  // CSS builder moved to @common/quillStyle to keep renderer and main consistent
 }

@@ -3,6 +3,7 @@ import {
     webDarkTheme,
     webLightTheme,
     type Theme,
+    Toaster,
 } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
 import type { AppSettings } from "@common/types";
@@ -18,7 +19,7 @@ import { TemplateListPage } from "./pages/TemplateListPage";
 import { TemplateViewPage } from "./pages/TemplateViewPage";
 import { DocumentListPage } from "./pages/DocumentListPage";
 import { DocumentEditorPage } from "./pages/DocumentEditorPage";
-// import { ProjectDocumentEditorPage } from "./pages/ProjectDocumentEditorPage";
+import { GLOBAL_TOASTER_ID } from "./utils/toastHelpers";
 
 const shouldUseDarkColors = (): boolean => window.ContextBridge.themeShouldUseDarkColors();
 
@@ -65,6 +66,8 @@ export const App = () => {
 
     return (
         <FluentProvider theme={theme} style={{ height: "100vh"}}>
+            {/* Global toaster to persist across route changes */}
+            <Toaster toasterId={GLOBAL_TOASTER_ID} />
             <AppLayout>
                 <Routes>
                     <Route path="/" element={<Navigate to="/projects" replace />} />
@@ -80,7 +83,6 @@ export const App = () => {
                     <Route path="/projects/:id" element={<ProjectPreviewPage />} />
                     <Route path="/projects/:id/print" element={<PrintPreviewPage />} />
                     <Route path="/projects/:id/edit" element={<ProjectEditorPage />} />
-                    {/* <Route path="/projects/:pid/documents/:pdid/edit" element={<ProjectDocumentEditorPage />} /> */}
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to="/templates" replace />} />
                 </Routes>
