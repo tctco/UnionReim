@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import QuillEditor from "../components/Common/QuillEditor";
 import { useDocument, useDocumentTemplates } from "../hooks/useDocuments";
 import { useSaveHandler } from "../utils/toastHelpers";
+import { useI18n } from "../i18n";
 import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 
 const useStyles = makeStyles({
@@ -26,6 +27,7 @@ export function DocumentEditorPage() {
     const documentId = isNew ? null : parseInt(id || "0");
     const { document, loading } = useDocument(documentId);
     const { createDocument, updateDocument } = useDocumentTemplates();
+    const { t } = useI18n();
     const saveWithToast = useSaveHandler({
         successTitle: "保存成功",
         successMessage: "文档已保存",
@@ -72,7 +74,7 @@ export function DocumentEditorPage() {
     if (!isNew && loading && !document) {
         return (
             <div className={styles.container}>
-                <Spinner label="Loading document..." />
+                <Spinner label={t("documents.loadingOne")} />
             </div>
         );
     }
@@ -81,25 +83,25 @@ export function DocumentEditorPage() {
         <div className={styles.container}>
             <Toaster />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Title3>{isNew ? "New Document" : "Edit Document"}</Title3>
+                <Title3>{isNew ? t("documents.editorNewTitle") : t("documents.editorEditTitle")}</Title3>
                 <div style={{ display: "flex", gap: 8 }}>
-                    <Button onClick={() => navigate("/documents")}>Cancel</Button>
-                    <Button appearance="primary" icon={<Save24Regular />} onClick={handleSave}>
-                        Save
+                    <Button onClick={() => navigate("/documents")}>{t("documents.editorCancel")}</Button>
+                <Button appearance="primary" icon={<Save24Regular />} onClick={handleSave}>
+                        {t("documents.editorSave")}
                     </Button>
                 </div>
             </div>
             <div className={styles.section}>
-                <Field label="Name">
+                <Field label={t("documents.fieldName")}>
                     <Input value={name} onChange={(_, d) => setName(d.value)} />
                 </Field>
-                <Field label="Description">
+                <Field label={t("documents.fieldDescription")}>
                     <Input value={description} onChange={(_, d) => setDescription(d.value)} />
                 </Field>
             </div>
             <div className={styles.section}>
                 <div style={{ marginBottom: 8, color: tokens.colorNeutralForeground3 }}>
-                    支持占位符：{formatWatermarkPlaceholderList()}
+                    {t("documents.placeholdersTip", { list: formatWatermarkPlaceholderList() })}
                 </div>
                 <QuillEditor initialHtml={html} onHtmlChange={setHtml} />
             </div>

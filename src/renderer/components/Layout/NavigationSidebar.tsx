@@ -6,6 +6,7 @@ import {
     Settings24Regular,
 } from "@fluentui/react-icons";
 import { useState } from "react";
+import { useI18n } from "../../i18n";
 import { useLocation, useNavigate } from "react-router";
 
 const useStyles = makeStyles({
@@ -48,6 +49,7 @@ export function NavigationSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const { t } = useI18n();
 
     const getCurrentTab = () => {
         if (location.pathname.startsWith("/projects")) return "projects";
@@ -73,18 +75,18 @@ export function NavigationSidebar() {
     return (
         <div className={`${styles.sidebar} ${isCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded}`}>
             <div className={styles.header}>
-                {!isCollapsed && <div className={styles.title}>Reimbursement</div>}
+                {!isCollapsed && <div className={styles.title}>{t("app.title")}</div>}
                 <Button
                     appearance="subtle"
                     icon={<Navigation24Regular />}
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    title={isCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
                 />
             </div>
 
             {!isCollapsed && (
                 <Caption1 style={{ marginBottom: "8px", overflow: "hidden", whiteSpace: "nowrap" }}>
-                    Manage your reimbursement materials
+                    {t("sidebar.tagline")}
                 </Caption1>
             )}
 
@@ -95,16 +97,16 @@ export function NavigationSidebar() {
                 className={styles.tabList}
             >
                 <Tab value="projects" icon={<Folder24Regular />}>
-                    {!isCollapsed && "Projects"}
+                    {!isCollapsed && t("nav.projects")}
                 </Tab>
                 <Tab value="documents" icon={<DocumentMultiple24Regular />}>
-                    {!isCollapsed && "Documents"}
+                    {!isCollapsed && t("nav.documents")}
                 </Tab>
                 <Tab value="templates" icon={<DocumentMultiple24Regular />}>
-                    {!isCollapsed && "Templates"}
+                    {!isCollapsed && t("nav.templates")}
                 </Tab>
                 <Tab value="settings" icon={<Settings24Regular />}>
-                    {!isCollapsed && "Settings"}
+                    {!isCollapsed && t("settings.title")}
                 </Tab>
             </TabList>
         </div>

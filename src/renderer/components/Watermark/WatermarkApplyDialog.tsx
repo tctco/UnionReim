@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle } from "@fluentui/react-components";
 import type { Attachment, AppSettings, WatermarkSettings, WatermarkConfig } from "@common/types";
 import WatermarkSettingsPanel from "../Settings/WatermarkSettingsPanel";
+import { useI18n } from "../../i18n";
 
 function toReimbursementUrl(absOrRelPath: string): string {
   const normalized = absOrRelPath.replace(/\\/g, "/");
@@ -18,6 +19,7 @@ export default function WatermarkApplyDialog(props: {
   onApplied: () => void;
 }) {
   const { open, attachment, onCancel, onApplied } = props;
+  const { t } = useI18n();
   const [fonts, setFonts] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [wm, setWm] = useState<WatermarkSettings>({
@@ -132,7 +134,7 @@ export default function WatermarkApplyDialog(props: {
     <Dialog open={open} onOpenChange={(_, d) => { if (!d.open) onCancel(); }}>
       <DialogSurface style={{ maxWidth: 860 }}>
         <DialogBody>
-          <DialogTitle>Apply Watermark</DialogTitle>
+          <DialogTitle>{t("watermark.applyTitle")}</DialogTitle>
           <DialogContent>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
               <WatermarkSettingsPanel
@@ -146,8 +148,8 @@ export default function WatermarkApplyDialog(props: {
             </div>
           </DialogContent>
           <DialogActions>
-            <Button appearance="secondary" onClick={onCancel}>Cancel</Button>
-            <Button appearance="primary" onClick={handleConfirm}>Apply</Button>
+            <Button appearance="secondary" onClick={onCancel}>{t("watermark.cancel")}</Button>
+            <Button appearance="primary" onClick={handleConfirm}>{t("watermark.apply")}</Button>
           </DialogActions>
         </DialogBody>
       </DialogSurface>

@@ -1,8 +1,10 @@
 import { Button, Field, Input } from "@fluentui/react-components";
 import { Folder24Regular } from "@fluentui/react-icons";
+import { useI18n } from "../../i18n";
 
 export default function FileSettingsPanel(props: { defaultStoragePath?: string; onChange: (path: string) => void }) {
     const { defaultStoragePath, onChange } = props;
+    const { t } = useI18n();
 
     const handleBrowse = async () => {
         try {
@@ -26,7 +28,7 @@ export default function FileSettingsPanel(props: { defaultStoragePath?: string; 
                     style={{ flex: 1, minWidth: 520 }}
                 />
                 <Button appearance="outline" onClick={handleBrowse} icon={<Folder24Regular />}>
-                    Browse
+                    {t("common.browse")}
                 </Button>
             </div>
         </Field>

@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { Toast, ToastTitle, ToastBody, useToastController } from "@fluentui/react-components";
+import { useI18n } from "../i18n";
 
 // A single global toaster id so toasts survive route changes
 export const GLOBAL_TOASTER_ID = "app-global-toaster";
@@ -26,6 +27,7 @@ export interface AsyncOperationResult<T = unknown> {
  * - Otherwise, we treat the return value as the operation result and show a success toast.
  */
 export function useToastHandler(toastConfig: ToastConfig) {
+  const { t } = useI18n();
   const { dispatchToast } = useToastController(GLOBAL_TOASTER_ID);
 
   return useCallback(
@@ -51,7 +53,7 @@ export function useToastHandler(toastConfig: ToastConfig) {
             }
             return operationResult.data || null;
           } else {
-            throw new Error(operationResult.error || "Operation failed");
+            throw new Error(operationResult.error || t("toast.operationFailed"));
           }
         }
 
@@ -69,47 +71,50 @@ export function useToastHandler(toastConfig: ToastConfig) {
       } catch (error) {
         dispatchToast(
           <Toast>
-            <ToastTitle>{toastConfig.errorTitle || "Operation failed"}</ToastTitle>
-            <ToastBody>{toastConfig.errorMessage || (error instanceof Error ? error.message : "Unknown error")}</ToastBody>
+            <ToastTitle>{toastConfig.errorTitle || t("toast.operationFailed")}</ToastTitle>
+            <ToastBody>{toastConfig.errorMessage || (error instanceof Error ? error.message : t("toast.unknownError"))}</ToastBody>
           </Toast>,
           { intent: "error" },
         );
         return null;
       }
     },
-    [dispatchToast, toastConfig],
+    [dispatchToast, toastConfig, t],
   );
 }
 
 /** Handy success/error defaults for Save-like operations. */
 export function useSaveHandler(config?: Partial<ToastConfig>) {
+  const { t } = useI18n();
   return useToastHandler({
-    successTitle: "Saved",
-    successMessage: "Changes saved successfully",
-    errorTitle: "Save failed",
-    errorMessage: "Unable to save changes",
+    successTitle: t("toast.savedTitle"),
+    successMessage: t("toast.savedMessage"),
+    errorTitle: t("toast.saveFailedTitle"),
+    errorMessage: t("toast.saveFailedMessage"),
     ...config,
   });
 }
 
 /** Handy success/error defaults for Delete-like operations. */
 export function useDeleteHandler(config?: Partial<ToastConfig>) {
+  const { t } = useI18n();
   return useToastHandler({
-    successTitle: "Deleted",
-    successMessage: "Item deleted successfully",
-    errorTitle: "Delete failed",
-    errorMessage: "Unable to delete item",
+    successTitle: t("toast.deletedTitle"),
+    successMessage: t("toast.deletedMessage"),
+    errorTitle: t("toast.deleteFailedTitle"),
+    errorMessage: t("toast.deleteFailedMessage"),
     ...config,
   });
 }
 
 /** Handy success/error defaults for Update-like operations. */
 export function useUpdateHandler(config?: Partial<ToastConfig>) {
+  const { t } = useI18n();
   return useToastHandler({
-    successTitle: "Updated",
-    successMessage: "Changes updated successfully",
-    errorTitle: "Update failed",
-    errorMessage: "Unable to update changes",
+    successTitle: t("toast.updatedTitle"),
+    successMessage: t("toast.updatedMessage"),
+    errorTitle: t("toast.updateFailedTitle"),
+    errorMessage: t("toast.updateFailedMessage"),
     ...config,
   });
 }

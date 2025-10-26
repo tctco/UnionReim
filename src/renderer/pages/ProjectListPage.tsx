@@ -1,27 +1,12 @@
 import type { Project } from "@common/types";
-import {
-    Body1,
-    Button,
-    Card,
-    CardHeader,
-    Input,
-    makeStyles,
-    Spinner,
-    Title3,
-    tokens,
-    Badge,
-    Menu,
-    MenuItem,
-    MenuList,
-    MenuPopover,
-    MenuTrigger,
-    Caption1,
-} from "@fluentui/react-components";
-import { Add24Regular, Search24Regular, Delete24Regular, ArrowUpload24Regular, Edit24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
+import { Body1, Button, Input, makeStyles, Spinner, Title3, tokens } from "@fluentui/react-components";
+import { Add24Regular, Search24Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import ProjectCard from "../components/Project/ProjectCard";
 import { useProjects } from "../hooks/useProjects";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: {
@@ -75,6 +60,7 @@ export function ProjectListPage() {
     const styles = useStyles();
     const navigate = useNavigate();
     const { projects, loading, error, deleteProject, exportProject, importProject } = useProjects();
+    const { t } = useI18n();
     const [searchText, setSearchText] = useState("");
     const [deleteDialogProject, setDeleteDialogProject] = useState<Project | null>(null);
 
@@ -99,7 +85,7 @@ export function ProjectListPage() {
         e.stopPropagation();
         try {
             await exportProject(project.project_id);
-            alert("Project exported successfully!");
+            alert(t("projects.exportSuccess"));
         } catch (err) {
             console.error("Failed to export project:", err);
         }
@@ -108,7 +94,7 @@ export function ProjectListPage() {
     const handleImport = async () => {
         try {
             await importProject();
-            alert("Project imported successfully!");
+            alert(t("projects.importSuccess"));
         } catch (err) {
             console.error("Failed to import project:", err);
         }
@@ -125,20 +111,13 @@ export function ProjectListPage() {
         setDeleteDialogProject(null);
     };
 
-    const getStatusBadge = (status: string) => {
-        const colorMap: Record<string, "warning" | "success" | "informative" | "subtle"> = {
-            incomplete: "warning",
-            complete: "success",
-            exported: "informative",
-        };
-        return <Badge color={colorMap[status] || "subtle"}>{status}</Badge>;
-    };
+    // moved into ProjectCard
 
     if (loading && projects.length === 0) {
         return (
             <div className={styles.container}>
                 <div style={{ textAlign: "center", padding: "64px" }}>
-                    <Spinner size="large" label="Loading projects..." />
+                    <Spinner size="large" label={t("projects.loading")} />
                 </div>
             </div>
         );
@@ -147,13 +126,13 @@ export function ProjectListPage() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <Title3>Projects</Title3>
+                <Title3>{t("projects.title")}</Title3>
                 <div style={{ display: "flex", gap: "8px" }}>
                     <Button onClick={handleImport}>
-                        Import Project
+                        {t("projects.importProject")}
                     </Button>
                     <Button appearance="primary" icon={<Add24Regular />} onClick={handleCreate}>
-                        New Project
+                        {t("projects.newProject")}
                     </Button>
                 </div>
             </div>
@@ -161,13 +140,13 @@ export function ProjectListPage() {
             <div className={styles.searchBar}>
                 <Input
                     className={styles.searchInput}
-                    placeholder="Search projects..."
+                    placeholder={t("projects.searchPlaceholder")}
                     value={searchText}
                     onChange={(_, data) => setSearchText(data.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     contentBefore={<Search24Regular />}
                 />
-                <Button onClick={handleSearch}>Search</Button>
+                <Button onClick={handleSearch}>{t("common.search")}</Button>
             </div>
 
             {error && (
@@ -178,66 +157,19 @@ export function ProjectListPage() {
 
             {projects.length === 0 ? (
                 <div className={styles.emptyState}>
-                    <Body1>No projects found. Create your first project to get started.</Body1>
+                    <Body1>{t("projects.empty")}</Body1>
                 </div>
             ) : (
                 <div className={styles.grid}>
                     {projects.map((project) => (
-                        <Card key={project.project_id} className={styles.card} onClick={() => handleView(project)}>
-                            <CardHeader
-                                header={<Body1>{project.name}</Body1>}
-                                action={
-                                    <Menu>
-                                        <MenuTrigger disableButtonEnhancement>
-                                            <Button
-                                                appearance="subtle"
-                                                icon={<MoreVertical24Regular />}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </MenuTrigger>
-                                        <MenuPopover>
-                                            <MenuList>
-                                                <MenuItem
-                                                    icon={<Edit24Regular />}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEdit(project);
-                                                    }}
-                                                >
-                                                    Edit
-                                                </MenuItem>
-                                                <MenuItem
-                                                    icon={<ArrowUpload24Regular />}
-                                                    onClick={(e) => handleExport(project, e)}
-                                                >
-                                                    Export
-                                                </MenuItem>
-                                                <MenuItem
-                                                    icon={<Delete24Regular />}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeleteDialogProject(project);
-                                                    }}
-                                                >
-                                                    Delete
-                                                </MenuItem>
-                                            </MenuList>
-                                        </MenuPopover>
-                                    </Menu>
-                                }
-                            />
-                            <div className={styles.cardContent}>
-                                <div style={{ marginBottom: "8px" }}>
-                                    {getStatusBadge(project.status)}
-                                </div>
-                                <div className={styles.metadata}>
-                                    <Caption1>Creator: {project.creator || "Unknown"}</Caption1>
-                                    <Caption1>
-                                        Created: {new Date(project.create_time).toLocaleDateString()}
-                                    </Caption1>
-                                </div>
-                            </div>
-                        </Card>
+                        <ProjectCard
+                          key={project.project_id}
+                          project={project}
+                          onClick={() => handleView(project)}
+                          onEdit={(e) => { e.stopPropagation(); handleEdit(project); }}
+                          onExport={(e) => handleExport(project, e)}
+                          onDelete={(e) => { e.stopPropagation(); setDeleteDialogProject(project); }}
+                        />
                     ))}
                 </div>
             )}
@@ -256,4 +188,3 @@ export function ProjectListPage() {
         </div>
     );
 }
-

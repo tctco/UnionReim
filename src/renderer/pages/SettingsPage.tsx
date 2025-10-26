@@ -23,6 +23,8 @@ import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPa
 import FileSettingsPanel from "../components/Settings/FileSettingsPanel";
 import PreviewSettingsPanel from "../components/Settings/PreviewSettingsPanel";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import LanguageSettingsPanel from "../components/Settings/LanguageSettingsPanel";
+import { useI18n } from "../i18n";
 // (local hsv type is defined inside ColorPickerPopover)
 
 const useStyles = makeStyles({
@@ -104,6 +106,7 @@ const useStyles = makeStyles({
 
 export function SettingsPage() {
     const styles = useStyles();
+    const { t } = useI18n();
     const [settings, setSettings] = useState<AppSettings>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -116,13 +119,8 @@ export function SettingsPage() {
     // local states not needed after splitting panels
     // color popover handled by ColorPickerPopover component
 
-    // 使用toast处理器
-    const saveWithToast = useSaveHandler({
-        successTitle: "设置已保存",
-        successMessage: "应用设置已成功更新",
-        errorTitle: "保存设置失败",
-        errorMessage: "无法保存应用设置",
-    });
+    // 使用toast处理器（使用通用的 i18n 提示文案）
+    const saveWithToast = useSaveHandler();
 
     useEffect(() => {
         loadSettings();
@@ -232,7 +230,7 @@ export function SettingsPage() {
         }
 
         // watermark text (center-anchored with rotation)
-        const text = "Watermark Preview";
+        const text = t("settings.watermarkPreview");
         const x = (Math.max(0, Math.min(100, wm.xPercent ?? 50)) / 100) * width;
         const y = (Math.max(0, Math.min(100, wm.yPercent ?? 50)) / 100) * height;
         const fontSize = wm.fontSize ?? 48;
@@ -256,7 +254,7 @@ export function SettingsPage() {
     if (loading) {
         return (
             <div className={styles.container}>
-                <div>加载设置中...</div>
+                <div>{t("settings.loading")}</div>
             </div>
         );
     }
@@ -269,10 +267,10 @@ export function SettingsPage() {
             <ConfirmDialog
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}
-                title="迁移文件"
-                message="更改默认存储位置将迁移所有文件到新位置，可能需要一些时间。是否继续？"
-                confirmText="迁移并应用"
-                cancelText="取消"
+                title={t("settings.migrateTitle")}
+                message={t("settings.migrateMessage")}
+                confirmText={t("settings.migrateConfirm")}
+                cancelText={t("settings.migrateCancel")}
                 onConfirm={async () => {
                     if (!pendingStoragePath) return;
                     try {
@@ -295,13 +293,13 @@ export function SettingsPage() {
             
             <div className={styles.header}>
                 <Settings24Regular />
-                <h1 className={styles.title}>应用设置</h1>
+                <h1 className={styles.title}>{t("settings.title")}</h1>
             </div>
 
-            <Accordion multiple collapsible defaultOpenItems={["wm", "user", "appearance", "files", "preview"]}>
+            <Accordion multiple collapsible defaultOpenItems={["wm", "user", "appearance", "files", "preview", "language"]}>
                 <AccordionItem value="wm">
                     <AccordionHeader>
-                        <Settings24Regular />&nbsp;Watermark
+                        <Settings24Regular />&nbsp;{t("settings.watermark")}
                     </AccordionHeader>
                     <AccordionPanel>
                         <WatermarkSettingsPanel wm={wm} fonts={fonts} onChange={updateWatermark} />
@@ -310,7 +308,7 @@ export function SettingsPage() {
                     
                 <AccordionItem value="user">
                     <AccordionHeader>
-                        <Person24Regular />&nbsp;用户设置
+                        <Person24Regular />&nbsp;{t("settings.userSettings")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <UserSettingsPanel
@@ -324,7 +322,7 @@ export function SettingsPage() {
 
                 <AccordionItem value="appearance">
                     <AccordionHeader>
-                        <DarkTheme24Regular />&nbsp;外观设置
+                        <DarkTheme24Regular />&nbsp;{t("settings.appearance")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <AppearanceSettingsPanel
@@ -336,7 +334,7 @@ export function SettingsPage() {
 
                 <AccordionItem value="files">
                     <AccordionHeader>
-                        <Folder24Regular />&nbsp;文件设置
+                        <Folder24Regular />&nbsp;{t("settings.files")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <FileSettingsPanel
@@ -357,7 +355,7 @@ export function SettingsPage() {
 
                 <AccordionItem value="preview">
                     <AccordionHeader>
-                        <Settings24Regular />&nbsp;预览设置
+                        <Settings24Regular />&nbsp;{t("settings.preview")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <PreviewSettingsPanel
@@ -367,7 +365,19 @@ export function SettingsPage() {
                     />
                     </AccordionPanel>
                 </AccordionItem>
+                <AccordionItem value="language">
+                    <AccordionHeader>
+                        <Settings24Regular />&nbsp;{t("settings.language")}
+                    </AccordionHeader>
+                    <AccordionPanel>
+                        <LanguageSettingsPanel
+                            language={(formData.language as 'en'|'zh') || 'en'}
+                            onChange={(lang) => setFormData({ ...formData, language: lang })}
+                        />
+                    </AccordionPanel>
+                </AccordionItem>
             </Accordion>
+            
 
             {/* 操作按钮 */}
             <div className={styles.actionButtons}>
@@ -376,14 +386,14 @@ export function SettingsPage() {
                     onClick={handleReset}
                     disabled={!hasChanges || saving}
                 >
-                    重置
+                    {t("settings.resetBtn")}
                 </Button>
                 <Button 
                     appearance="primary" 
                     onClick={handleSave}
                     disabled={!hasChanges || saving}
                 >
-                    {saving ? "保存中..." : "保存设置"}
+                    {saving ? t("settings.saving") : t("settings.saveBtn")}
                 </Button>
             </div>
         </div>

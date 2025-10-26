@@ -2,6 +2,7 @@ import { Spinner, makeStyles, tokens } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { toReimbursementUrlFromRelative } from "@common/urlHelpers";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
   container: {
@@ -29,6 +30,7 @@ const useStyles = makeStyles({
 
 export function PrintPreviewPage() {
   const styles = useStyles();
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const projectId = parseInt(id || "0", 10);
 
@@ -47,7 +49,7 @@ export function PrintPreviewPage() {
           setRelativePath(res.data);
           setError(null);
         } else {
-          setError(res.error || "Failed to generate PDF");
+          setError(res.error || t("printPreview.generateFailed"));
         }
       } catch (e: any) {
         if (!active) return;
@@ -65,7 +67,7 @@ export function PrintPreviewPage() {
       <div className={styles.previewWrap}>
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-            <Spinner label="Generating PDF..." />
+            <Spinner label={t("printPreview.generating")} />
           </div>
         ) : error ? (
           <div style={{ padding: 24, color: tokens.colorPaletteRedForeground1 }}>
@@ -74,7 +76,7 @@ export function PrintPreviewPage() {
         ) : relativePath ? (
           <embed className={styles.embed} src={toReimbursementUrlFromRelative(relativePath)} type="application/pdf" />
         ) : (
-          <div style={{ padding: 24 }}>No file to preview</div>
+          <div style={{ padding: 24 }}>{t("printPreview.noFile")}</div>
         )}
       </div>
     </div>

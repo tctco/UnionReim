@@ -8,6 +8,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@fluentui/react-components";
+import { useI18n } from "../../i18n";
 
 interface ConfirmDialogProps {
     title: string;
@@ -26,8 +27,8 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
     title,
     message,
-    confirmText = "Confirm",
-    cancelText = "Cancel",
+    confirmText,
+    cancelText,
     onConfirm,
     onCancel,
     trigger,
@@ -35,6 +36,9 @@ export function ConfirmDialog({
     onOpenChange,
     destructive = false,
 }: ConfirmDialogProps) {
+    const { t } = useI18n();
+    const confirm = confirmText ?? t("common.confirm");
+    const cancel = cancelText ?? t("common.cancel");
     const handleConfirm = () => {
         onConfirm();
         onOpenChange?.(false);
@@ -55,13 +59,13 @@ export function ConfirmDialog({
                         <DialogContent>{message}</DialogContent>
                         <DialogActions>
                             <Button appearance="secondary" onClick={handleCancel}>
-                                {cancelText}
+                                {cancel}
                             </Button>
                             <Button 
                                 appearance={destructive ? "primary" : "primary"} 
                                 onClick={handleConfirm}
                             >
-                                {confirmText}
+                                {confirm}
                             </Button>
                         </DialogActions>
                     </DialogBody>
@@ -86,7 +90,7 @@ export function ConfirmDialog({
                     <DialogActions>
                         <DialogTrigger disableButtonEnhancement>
                             <Button appearance="secondary" onClick={onCancel}>
-                                {cancelText}
+                                {cancel}
                             </Button>
                         </DialogTrigger>
                         <DialogTrigger disableButtonEnhancement>
@@ -94,7 +98,7 @@ export function ConfirmDialog({
                                 appearance={destructive ? "primary" : "primary"} 
                                 onClick={onConfirm}
                             >
-                                {confirmText}
+                                {confirm}
                             </Button>
                         </DialogTrigger>
                     </DialogActions>
@@ -103,5 +107,4 @@ export function ConfirmDialog({
         </Dialog>
     );
 }
-
 

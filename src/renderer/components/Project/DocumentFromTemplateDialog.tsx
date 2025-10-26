@@ -14,6 +14,7 @@ import {
     tokens,
 } from "@fluentui/react-components";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../../i18n";
 import QuillEditor from "../Common/QuillEditor";
 
 const useStyles = makeStyles({
@@ -24,14 +25,6 @@ const useStyles = makeStyles({
         background: tokens.colorNeutralBackground1,
     },
 });
-
-function extractPlaceholders(html: string): string[] {
-    const set = new Set<string>();
-    const re = /\{([a-zA-Z0-9_]+)\}/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(html)) !== null) set.add(m[1]);
-    return Array.from(set);
-}
 
 function apply(html: string, values: Record<string, string>): string {
     return html.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, k) => values[k] ?? `{${k}}`);
@@ -48,6 +41,7 @@ export default function DocumentFromTemplateDialog(props: {
 }) {
     const { open, onOpenChange, projectId, projectItemId, projectName, projectCreator, onUploaded } = props;
     const styles = useStyles();
+    const { t } = useI18n();
 
     const [loading, setLoading] = useState(false);
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
@@ -134,15 +128,15 @@ export default function DocumentFromTemplateDialog(props: {
         <Dialog open={open} onOpenChange={(_, data) => onOpenChange(!!data.open)}>
             <DialogSurface>
                 <DialogBody>
-                    <DialogTitle>从模板添加文档</DialogTitle>
+                    <DialogTitle>{t("documents.fromTemplateTitle")}</DialogTitle>
                     <DialogContent>
                         {loading && <Spinner />}
                         <div className={styles.layout}>
                             <div className={styles.form}>
-                                <Field label="选择模板">
+                                <Field label={t("documents.selectTemplate")}>
                                     <Select value={selectedId} onChange={(_, d) => onSelectTemplate(d.value)}>
                                         <option value="" disabled>
-                                            选择...
+                                            {t("documents.selectPlaceholder")}
                                         </option>
                                         {templates.map((t) => (
                                             <option key={t.document_id} value={String(t.document_id)}>
@@ -157,18 +151,16 @@ export default function DocumentFromTemplateDialog(props: {
                                     key={(selectedId || "").length + (baseHtml || "").length}
                                     initialHtml={previewHtml}
                                     minHeight={420}
-                                    // readOnly
-                                    // showToolbar={false}
                                 />
                             </div>
                         </div>
                     </DialogContent>
                     <DialogActions>
                         <Button appearance="secondary" onClick={() => onOpenChange(false)}>
-                            取消
+                            {t("documents.cancel")}
                         </Button>
                         <Button appearance="primary" onClick={uploadPdf} disabled={!selectedId || loading}>
-                            生成并上传PDF
+                            {t("documents.generateAndUploadPdf")}
                         </Button>
                     </DialogActions>
                 </DialogBody>

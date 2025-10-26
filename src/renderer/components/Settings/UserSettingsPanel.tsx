@@ -1,4 +1,5 @@
-import { Button, Field, Input } from "@fluentui/react-components";
+import { Field, Input } from "@fluentui/react-components";
+import { useI18n } from "../../i18n";
 
 export default function UserSettingsPanel(props: {
     defaultUserName?: string;
@@ -7,35 +8,31 @@ export default function UserSettingsPanel(props: {
     onChange: (patch: { defaultUserName?: string; studentId?: string; signatureImagePath?: string }) => void;
 }) {
     const { defaultUserName, studentId, signatureImagePath, onChange } = props;
-    const pickSignature = async () => {
-        const res = await window.ContextBridge.system.selectDirectory();
-        // Above API is directory; fallback to manual path paste for now
-        // If directory chooser was opened, we won't use it here. Keep simple input.
-    };
+    const { t } = useI18n();
     return (
         <div style={{ display: 'grid', gap: 12 }}>
-            <Field label="默认用户名">
+            <Field label={t("user.defaultUserNameLabel")}>
                 <Input
                     id="defaultUserName"
                     value={defaultUserName || ""}
                     onChange={(_, data) => onChange({ defaultUserName: data.value })}
-                    placeholder="输入默认用户名"
+                    placeholder={t("user.defaultUserNamePlaceholder")}
                 />
             </Field>
-            <Field label="学号">
+            <Field label={t("user.studentIdLabel")}>
                 <Input
                     id="studentId"
                     value={studentId || ""}
                     onChange={(_, data) => onChange({ studentId: data.value })}
-                    placeholder="输入学号"
+                    placeholder={t("user.studentIdPlaceholder")}
                 />
             </Field>
-            <Field label="电子签名图片路径">
+            <Field label={t("user.signaturePathLabel")}>
                 <Input
                     id="signatureImagePath"
                     value={signatureImagePath || ""}
                     onChange={(_, data) => onChange({ signatureImagePath: data.value })}
-                    placeholder="输入本地图片绝对路径，例如 C:\\Users\\me\\sign.png"
+                    placeholder={t("user.signaturePathPlaceholder")}
                 />
             </Field>
         </div>

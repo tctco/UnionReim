@@ -20,6 +20,7 @@ import {
     Edit24Regular,
     MoreVertical24Regular,
 } from "@fluentui/react-icons";
+import { useI18n } from "../../i18n";
 
 const useStyles = makeStyles({
     card: {
@@ -61,6 +62,7 @@ interface TemplateCardProps {
 
 export function TemplateCard({ template, onView, onEdit, onClone, onDelete, onExport }: TemplateCardProps) {
     const styles = useStyles();
+    const { t } = useI18n();
 
     const handleCardClick = () => {
         onView(template);
@@ -88,7 +90,7 @@ export function TemplateCard({ template, onView, onEdit, onClone, onDelete, onEx
                                         onEdit(template);
                                     }}
                                 >
-                                    Edit
+                                    {t("common.edit")}
                                 </MenuItem>
                                 <MenuItem
                                     icon={<Copy24Regular />}
@@ -97,13 +99,13 @@ export function TemplateCard({ template, onView, onEdit, onClone, onDelete, onEx
                                         onClone(template);
                                     }}
                                 >
-                                    Clone
+                                    {t("common.clone")}
                                 </MenuItem>
                                 <MenuItem
                                     icon={<ArrowUpload24Regular />}
                                     onClick={(e) => onExport(template, e)}
                                 >
-                                    Export
+                                    {t("common.export")}
                                 </MenuItem>
                                 <MenuItem
                                     icon={<Delete24Regular />}
@@ -112,7 +114,7 @@ export function TemplateCard({ template, onView, onEdit, onClone, onDelete, onEx
                                         onDelete(template);
                                     }}
                                 >
-                                    Delete
+                                    {t("common.delete")}
                                 </MenuItem>
                             </MenuList>
                         </MenuPopover>
@@ -126,19 +128,18 @@ export function TemplateCard({ template, onView, onEdit, onClone, onDelete, onEx
             )}
             <div className={styles.metadata}>
                 <Caption1>
-                    Created: {new Date(template.create_time).toLocaleDateString()}
+                    {t("common.created")}: {new Date(template.create_time).toLocaleDateString()}
                 </Caption1>
                 {template.creator && (
-                    <Caption1>Creator: {template.creator}</Caption1>
+                    <Caption1>{t("common.creator")}: {template.creator}</Caption1>
                 )}
                 {template.is_default && (
                     <Caption1 style={{ color: tokens.colorPaletteBlueForeground2 }}>
-                        Default
+                        {t("common.default")}
                     </Caption1>
                 )}
             </div>
         </Card>
     );
 }
-
 

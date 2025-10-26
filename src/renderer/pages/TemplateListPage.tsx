@@ -20,6 +20,7 @@ import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { TemplateCard } from "../components/Template/TemplateCard";
 import { useTemplates } from "../hooks/useTemplates";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: {
@@ -58,6 +59,7 @@ export function TemplateListPage() {
     const styles = useStyles();
     const navigate = useNavigate();
     const { templates, loading, error, loadTemplates, deleteTemplate, cloneTemplate } = useTemplates();
+    const { t } = useI18n();
     const [searchText, setSearchText] = useState("");
     const [cloneDialogTemplate, setCloneDialogTemplate] = useState<Template | null>(null);
     const [deleteDialogTemplate, setDeleteDialogTemplate] = useState<Template | null>(null);
@@ -141,7 +143,7 @@ export function TemplateListPage() {
         return (
             <div className={styles.container}>
                 <div style={{ textAlign: "center", padding: "64px" }}>
-                    <Spinner size="large" label="Loading templates..." />
+                    <Spinner size="large" label={t("templates.loading")} />
                 </div>
             </div>
         );
@@ -150,13 +152,13 @@ export function TemplateListPage() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <Title3>Templates</Title3>
+                <Title3>{t("templates.title")}</Title3>
                 <div style={{ display: "flex", gap: "12px" }}>
                     <Button appearance="outline" icon={<ArrowDownload24Regular />} onClick={handleImport}>
-                        Import
+                        {t("templates.import")}
                     </Button>
                     <Button appearance="primary" icon={<Add24Regular />} onClick={handleCreate}>
-                        New Template
+                        {t("templates.newTemplate")}
                     </Button>
                 </div>
             </div>
@@ -164,13 +166,13 @@ export function TemplateListPage() {
             <div className={styles.searchBar}>
                 <Input
                     className={styles.searchInput}
-                    placeholder="Search templates..."
+                    placeholder={t("templates.searchPlaceholder")}
                     value={searchText}
                     onChange={(_, data) => setSearchText(data.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                     contentBefore={<Search24Regular />}
                 />
-                <Button onClick={handleSearch}>Search</Button>
+                <Button onClick={handleSearch}>{t("common.search")}</Button>
             </div>
 
             {error && (
@@ -181,7 +183,7 @@ export function TemplateListPage() {
 
             {templates.length === 0 ? (
                 <div className={styles.emptyState}>
-                    <Body1>No templates found. Create your first template to get started.</Body1>
+                    <Body1>{t("templates.empty")}</Body1>
                 </div>
             ) : (
                 <div className={styles.grid}>
@@ -208,20 +210,20 @@ export function TemplateListPage() {
                 <Dialog open onOpenChange={(_, data) => !data.open && setCloneDialogTemplate(null)}>
                     <DialogSurface>
                         <DialogBody>
-                            <DialogTitle>Clone Template</DialogTitle>
+                            <DialogTitle>{t("templates.cloneDialogTitle")}</DialogTitle>
                             <DialogContent>
                                 <Input
                                     value={cloneName}
                                     onChange={(_, data) => setCloneName(data.value)}
-                                    placeholder="Enter name for cloned template"
+                                    placeholder={t("templates.cloneDialogPlaceholder")}
                                 />
                             </DialogContent>
                             <DialogActions>
                                 <Button appearance="secondary" onClick={() => setCloneDialogTemplate(null)}>
-                                    Cancel
+                                    {t("common.cancel")}
                                 </Button>
                                 <Button appearance="primary" onClick={handleClone}>
-                                    Clone
+                                    {t("common.clone")}
                                 </Button>
                             </DialogActions>
                         </DialogBody>
@@ -231,10 +233,10 @@ export function TemplateListPage() {
 
             {/* Delete Dialog */}
             <ConfirmDialog
-                title="Delete Template"
-                message={deleteDialogTemplate ? `Are you sure you want to delete "${deleteDialogTemplate.name}"? This action cannot be undone.` : ""}
-                confirmText="Delete"
-                cancelText="Cancel"
+                title={t("templates.deleteDialogTitle")}
+                message={deleteDialogTemplate ? t("templates.deleteDialogMessage", { name: deleteDialogTemplate.name }) : ""}
+                confirmText={t("common.delete")}
+                cancelText={t("common.cancel")}
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteDialogTemplate(null)}
                 open={!!deleteDialogTemplate}
@@ -244,6 +246,3 @@ export function TemplateListPage() {
         </div>
     );
 }
-
-
-

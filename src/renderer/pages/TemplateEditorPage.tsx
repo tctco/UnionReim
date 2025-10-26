@@ -20,6 +20,7 @@ import { useTemplate, useTemplates } from "../hooks/useTemplates";
 import { useSaveHandler } from "../utils/toastHelpers";
 import type { TemplateItem } from "@common/types";
 import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: {
@@ -72,6 +73,7 @@ const useStyles = makeStyles({
 
 export function TemplateEditorPage() {
     const styles = useStyles();
+    const { t } = useI18n();
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams<{ id: string }>();
@@ -191,7 +193,7 @@ export function TemplateEditorPage() {
         return (
             <div className={styles.container}>
                 <div style={{ textAlign: "center", padding: "64px" }}>
-                    <Spinner size="large" label="Loading template..." />
+                    <Spinner size="large" label={t("templates.editorLoading")} />
                 </div>
             </div>
         );
@@ -201,35 +203,35 @@ export function TemplateEditorPage() {
         <div className={styles.container}>
             <Toaster />
             <div className={styles.header}>
-                <Title3>{isNew ? "New Template" : "Edit Template"}</Title3>
+                <Title3>{isNew ? t("templates.editorNewTitle") : t("templates.editorEditTitle")}</Title3>
                 <div style={{ display: "flex", gap: "8px" }}>
-                    <Button onClick={() => navigate("/templates")}>Cancel</Button>
+                    <Button onClick={() => navigate("/templates")}>{t("templates.editorCancel")}</Button>
                     <Button appearance="primary" icon={<Save24Regular />} onClick={handleSaveTemplate}>
-                        Save
+                        {t("templates.editorSave")}
                     </Button>
                 </div>
             </div>
 
             <div className={styles.section}>
-                <Field label="Template Name" required>
+                <Field label={t("templates.fieldName")} required>
                     <Input
                         value={name}
                         onChange={(_, data) => setName(data.value)}
-                        placeholder="e.g., Conference Reimbursement"
+                        placeholder={t("templates.fieldNamePlaceholder")}
                     />
                 </Field>
-                <Field label="Description">
+                <Field label={t("templates.fieldDesc")}>
                     <Textarea
                         value={description}
                         onChange={(_, data) => setDescription(data.value)}
-                        placeholder="Optional description"
+                        placeholder={t("templates.fieldDescPlaceholder")}
                     />
                 </Field>
-                <Field label="Creator">
+                <Field label={t("templates.fieldCreator")}>
                     <Input
                         value={creator}
                         onChange={(_, data) => setCreator(data.value)}
-                        placeholder="Enter creator name"
+                        placeholder={t("templates.fieldCreatorPlaceholder")}
                     />
                 </Field>
             </div>
@@ -237,9 +239,9 @@ export function TemplateEditorPage() {
             {!isNew && (
                 <div className={styles.section}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                        <Body1 style={{ fontWeight: tokens.fontWeightSemibold }}>Template Items</Body1>
+                        <Body1 style={{ fontWeight: tokens.fontWeightSemibold }}>{t("templates.itemsTitle")}</Body1>
                         <Button icon={<Add24Regular />} onClick={handleAddItem}>
-                            Add Item
+                            {t("templates.addItem")}
                         </Button>
                     </div>
 
@@ -260,7 +262,7 @@ export function TemplateEditorPage() {
                                             );
                                         }}
                                         onBlur={(e) => handleUpdateItem(item.item_id!, "name", e.target.value)}
-                                        placeholder="Item name"
+                                        placeholder={t("templates.itemNamePlaceholder")}
                                         style={{ flex: 1, marginRight: "12px" }}
                                     />
                                     <Button
@@ -271,17 +273,17 @@ export function TemplateEditorPage() {
                                 </div>
                                 <div className={styles.itemFields}>
                                     <Checkbox
-                                        label="Required"
+                                        label={t("templates.required")}
                                         checked={item.is_required || false}
                                         onChange={(_, data) => handleUpdateItem(item.item_id!, "is_required", data.checked)}
                                     />
                                     <Checkbox
-                                        label="Needs Watermark"
+                                        label={t("templates.needsWatermark")}
                                         checked={item.needs_watermark || false}
                                         onChange={(_, data) => handleUpdateItem(item.item_id!, "needs_watermark", data.checked)}
                                     />
                                     <Checkbox
-                                        label="Allow Multiple Files"
+                                        label={t("templates.allowMultiple")}
                                         checked={item.allows_multiple_files || false}
                                         onChange={(_, data) => handleUpdateItem(item.item_id!, "allows_multiple_files", data.checked)}
                                     />
@@ -289,8 +291,8 @@ export function TemplateEditorPage() {
                                 {item.needs_watermark && (
                                     <Field
                                         label={
-                                            <InfoLabel info={`Available placeholders: ${formatWatermarkPlaceholderList()}`}>
-                                                Watermark Template
+                                            <InfoLabel info={t("templates.placeholdersInfo", { list: formatWatermarkPlaceholderList() })}>
+                                                {t("templates.wmTemplate")}
                                             </InfoLabel>
                                         }
                                         style={{ marginTop: "12px" }}
@@ -307,7 +309,7 @@ export function TemplateEditorPage() {
                                                 );
                                             }}
                                             onBlur={(e) => handleUpdateItem(item.item_id!, "watermark_template", e.target.value)}
-                                            placeholder="e.g., {userName} - {itemName}"
+                                            placeholder={t("templates.wmTemplatePlaceholder")}
                                         />
                                     </Field>
                                 )}

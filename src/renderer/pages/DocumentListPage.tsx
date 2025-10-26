@@ -1,27 +1,11 @@
-import {
-    Body1,
-    Button,
-    Caption1,
-    Card,
-    CardHeader,
-    Input,
-    Menu,
-    MenuItem,
-    MenuList,
-    MenuPopover,
-    MenuTrigger,
-    Spinner,
-    Title3,
-    Toaster,
-    makeStyles,
-    tokens,
-} from "@fluentui/react-components";
+import { Body1, Button, Caption1, Card, CardHeader, Input, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, Toaster, makeStyles, tokens } from "@fluentui/react-components";
 import { Delete24Regular, MoreVertical24Regular, Search24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
 import type { DocumentTemplate } from "@common/types";
 import { useNavigate } from "react-router";
 import { useDocumentTemplates } from "../hooks/useDocuments";
 import { useDeleteHandler } from "../utils/toastHelpers";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
@@ -48,22 +32,24 @@ function SearchRow({
     className: string;
     inputClassName: string;
 }) {
+    const { t } = useI18n();
     return (
         <div className={className}>
             <Input
                 className={inputClassName}
-                placeholder="Search documents..."
+                placeholder={t("documents.searchPlaceholder")}
                 value={value}
                 onChange={(_, d) => onChange(d.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSearch()}
                 contentBefore={<Search24Regular />}
             />
-            <Button onClick={onSearch}>Search</Button>
+            <Button onClick={onSearch}>{t("common.search")}</Button>
         </div>
     );
 }
 
 function DocumentActions({ onDelete, onOpenMenu }: { onDelete: (e: React.MouseEvent) => void; onOpenMenu: (e: React.MouseEvent) => void }) {
+    const { t } = useI18n();
     return (
         <Menu>
             <MenuTrigger disableButtonEnhancement>
@@ -72,7 +58,7 @@ function DocumentActions({ onDelete, onOpenMenu }: { onDelete: (e: React.MouseEv
             <MenuPopover>
                 <MenuList>
                     <MenuItem icon={<Delete24Regular />} onClick={onDelete}>
-                        Delete
+                        {t("common.delete")}
                     </MenuItem>
                 </MenuList>
             </MenuPopover>
@@ -87,6 +73,7 @@ function DocumentCard({ d, onOpen, onDelete, className, contentClassName }: {
     className: string;
     contentClassName: string;
 }) {
+    const { t } = useI18n();
     const stop = (e: React.MouseEvent) => e.stopPropagation();
     const updated = useMemo(() => new Date(d.update_time).toLocaleDateString(), [d.update_time]);
     return (
@@ -98,7 +85,7 @@ function DocumentCard({ d, onOpen, onDelete, className, contentClassName }: {
             <div className={contentClassName}>
                 <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{d.description || ""}</Caption1>
                 <div style={{ marginTop: 8, color: tokens.colorNeutralForeground4 }}>
-                    <Caption1>Updated: {updated}</Caption1>
+                    <Caption1>{t("documents.updated")}: {updated}</Caption1>
                 </div>
             </div>
         </Card>
@@ -109,6 +96,7 @@ export function DocumentListPage() {
     const styles = useStyles();
     const navigate = useNavigate();
     const { documents, loading, loadDocuments, deleteDocument } = useDocumentTemplates();
+    const { t } = useI18n();
     const [search, setSearch] = useState("");
     const delWithToast = useDeleteHandler({
         successTitle: "删除成功",
@@ -129,7 +117,7 @@ export function DocumentListPage() {
         <div className={styles.container}>
             <Toaster />
             <div className={styles.header}>
-                <Title3>Documents</Title3>
+                <Title3>{t("documents.title")}</Title3>
             </div>
             <SearchRow
                 value={search}
@@ -138,7 +126,7 @@ export function DocumentListPage() {
                 className={styles.searchBar}
                 inputClassName={styles.searchInput}
             />
-            {loading && <Spinner label="Loading..." />}
+            {loading && <Spinner label={t("documents.loading")} />}
             {!loading && (
                 <div className={styles.grid}>
                     {documents.map((d) => (
