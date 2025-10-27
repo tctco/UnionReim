@@ -85,7 +85,7 @@ export default function ProjectItemCard(props: {
       <div className={classes.itemHeader}>
         <div>
           <Body1>{item.template_item.name}</Body1>
-          {item.template_item.is_required && (
+          {item.template_item.is_required && item.attachments.length === 0 && (
             <Badge color="danger" style={{ marginLeft: 8 }}>Required</Badge>
           )}
           {item.template_item.needs_watermark && (

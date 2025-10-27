@@ -5,13 +5,13 @@ import type {
     MultipleTemplateExportRequest,
     SettingsUpdateRequest,
     TemplateExportRequest,
-    TemplateImportRequest,
     UpdateProjectRequest,
     UpdateTemplateItemRequest,
     UpdateTemplateRequest,
     Attachment,
+    WatermarkConfig,
 } from "@common/types";
-import { BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { respond } from "./ipcUtils";
 import { ALLOWED_ATTACHMENT_EXTS } from "@common/constants";
 import { getFonts } from "font-list";
@@ -64,6 +64,25 @@ export function registerIpcHandlers(): void {
         }
         return true;
     }, { successFromBoolean: true }));
+
+    // Signature upload handlers
+    ipcMain.handle("settings:signatureUploadFromPath", respond((req: { path: string; original_name?: string }) => {
+        const rel = settingsService.saveSignatureFromPath(req.path, req.original_name);
+        const updated = settingsService.getAppSettings();
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send("settings:changed", updated);
+        }
+        return rel;
+    }));
+    ipcMain.handle("settings:signatureUploadFromData", respond((req: { data: number[]; name?: string; mime?: string }) => {
+        const buffer = Buffer.from(req.data);
+        const rel = settingsService.saveSignatureFromBuffer(buffer, req.name, req.mime);
+        const updated = settingsService.getAppSettings();
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send("settings:changed", updated);
+        }
+        return rel;
+    }));
 
     // Template handlers
     ipcMain.handle("template:create", respond((request: CreateTemplateRequest) => templateService.createTemplate(request)));
@@ -122,7 +141,7 @@ export function registerIpcHandlers(): void {
         return result.filePaths[0];
     }));
 
-    ipcMain.handle("template:import", respond(async (_request: TemplateImportRequest) => {
+    ipcMain.handle("template:import", respond(async () => {
         const result = await dialog.showOpenDialog({
             properties: ["openFile"],
             filters: [{ name: "JSON Files", extensions: ["json"] }],
@@ -146,7 +165,7 @@ export function registerIpcHandlers(): void {
         return exportPath;
     }));
 
-    ipcMain.handle("template:importFromZip", respond(async (_zip_path: string) => {
+    ipcMain.handle("template:importFromZip", respond(async () => {
         const result = await dialog.showOpenDialog({
             properties: ["openFile"],
             filters: [{ name: "ZIP Files", extensions: ["zip"] }],
@@ -300,58 +319,44 @@ export function registerIpcHandlers(): void {
     }, { successFromBoolean: true }));
 
     // Watermark handlers
-    ipcMain.handle("watermark:apply", respond((attachment_id: number, req?: { watermark_text?: string; config?: any }) =>
+    ipcMain.handle("watermark:apply", respond((attachment_id: number, req?: { watermark_text?: string; config?: WatermarkConfig }) =>
         watermarkService.applyWatermark(attachment_id, req?.watermark_text, req?.config)
     ));
     ipcMain.handle("watermark:delete", respond((attachment_id: number) => attachmentService.clearWatermark(attachment_id), { successFromBoolean: true }));
     ipcMain.handle("watermark:resolveText", respond((attachment_id: number) => watermarkService.resolveWatermarkText(attachment_id)));
 
     // Export/Import handlers
-    ipcMain.handle("project:export", async (event: IpcMainInvokeEvent, project_id: number) => {
-        try {
-            // Get project details for generating default filename
-            const project = projectService.getProject(project_id);
-            let defaultFileName = `project_${project_id}.zip`;
-            
-            if (project) {
-                const projectName = project.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
-                const creator = project.creator ? project.creator.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_") : "";
-                defaultFileName = creator ? `${projectName}_${creator}.zip` : `${projectName}.zip`;
-            }
-
-            const result = await dialog.showSaveDialog({
-                defaultPath: defaultFileName,
-                filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
-            });
-
-            if (result.canceled || !result.filePath) {
-                return { success: false, error: "Export canceled" };
-            }
-
-            const exportPath = await exportImportService.exportProject(project_id, result.filePath);
-            return { success: true, data: exportPath };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+    ipcMain.handle("project:export", respond(async (project_id: number) => {
+        // Get project details for generating default filename
+        const project = projectService.getProject(project_id);
+        let defaultFileName = `project_${project_id}.zip`;
+        if (project) {
+            const projectName = project.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
+            const creator = project.creator ? project.creator.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_") : "";
+            defaultFileName = creator ? `${projectName}_${creator}.zip` : `${projectName}.zip`;
         }
-    });
-
-    ipcMain.handle("project:import", async (event: IpcMainInvokeEvent) => {
-        try {
-            const result = await dialog.showOpenDialog({
-                properties: ["openFile"],
-                filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
-            });
-
-            if (result.canceled || result.filePaths.length === 0) {
-                return { success: false, error: "Import canceled" };
-            }
-
-            const project_id = await exportImportService.importProject(result.filePaths[0]);
-            return { success: true, data: project_id };
-        } catch (error: any) {
-            return { success: false, error: error.message };
+        const result = await dialog.showSaveDialog({
+            defaultPath: defaultFileName,
+            filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        });
+        if (result.canceled || !result.filePath) {
+            throw new Error("Export canceled");
         }
-    });
+        const exportPath = await exportImportService.exportProject(project_id, result.filePath);
+        return exportPath;
+    }));
+
+    ipcMain.handle("project:import", respond(async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openFile"],
+            filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            throw new Error("Import canceled");
+        }
+        const project_id = await exportImportService.importProject(result.filePaths[0]);
+        return project_id;
+    }));
 
     // Print handlers
     // Generate merged PDF and return its absolute path (no immediate print)
@@ -363,8 +368,8 @@ export function registerIpcHandlers(): void {
     }, { successFromBoolean: true }));
 
     // System helpers
-    ipcMain.handle("system:resolveStoragePath", respond((relative: string) => {
-        const { join } = require('path');
+    ipcMain.handle("system:resolveStoragePath", respond(async (relative: string) => {
+        const { join } = await import('path');
         return join(attachmentService.getStoragePath(), relative);
     }));
     ipcMain.handle("system:openPath", respond(async (absPath: string) => {

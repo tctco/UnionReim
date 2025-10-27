@@ -10,6 +10,7 @@ export const WATERMARK_PLACEHOLDERS: readonly WatermarkPlaceholder[] = [
   { token: "{itemName}", label: "Item Name", description: "Template item name" },
   { token: "{projectName}", label: "Project Name", description: "Project name" },
   { token: "{date}", label: "Date", description: "Current date (locale)" },
+  { token: "{signatureImage}", label: "Signature Image", description: "User signature image" },
 ] as const;
 
 export function formatWatermarkPlaceholderList(): string {

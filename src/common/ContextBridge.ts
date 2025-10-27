@@ -42,6 +42,8 @@ export type ContextBridge = {
         update: (request: SettingsUpdateRequest) => Promise<ApiResponse<AppSettings>>;
         getSetting: (key: string) => Promise<ApiResponse<string | null>>;
         setSetting: (key: string, value: string) => Promise<ApiResponse<void>>;
+        signatureUploadFromPath: (payload: { path: string; original_name?: string }) => Promise<ApiResponse<string>>;
+        signatureUploadFromData: (payload: { data: number[]; name?: string; mime?: string }) => Promise<ApiResponse<string>>;
     };
 
     // Template operations
@@ -127,7 +129,7 @@ export type ContextBridge = {
         create: (request: CreateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
         list: (filter?: { search?: string }) => Promise<ApiResponse<DocumentTemplate[]>>;
         get: (document_id: number) => Promise<ApiResponse<DocumentTemplate>>;
-        update: (request: UpdateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
+        update: (request: import('./types').UpdateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
         delete: (document_id: number) => Promise<ApiResponse<boolean>>;
     };
 

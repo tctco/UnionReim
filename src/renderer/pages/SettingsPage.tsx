@@ -315,6 +315,7 @@ export function SettingsPage() {
                         defaultUserName={formData.defaultUserName}
                         studentId={formData.studentId}
                         signatureImagePath={formData.signatureImagePath}
+                        signatureImageHeightCm={formData.signatureImageHeightCm}
                         onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
                     </AccordionPanel>

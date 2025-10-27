@@ -1,6 +1,7 @@
 import type { Attachment } from "@common/types";
 import { Button, Tooltip, Menu, MenuTrigger, MenuPopover, MenuList, MenuItem } from "@fluentui/react-components";
 import { Copy24Regular, Delete24Regular, Eye24Regular, Rename24Regular, Sparkle24Regular, Eraser24Regular } from "@fluentui/react-icons";
+import { WATERMARK_IMAGE_EXTS } from "@common/constants";
 
 /**
  * Small action bar for a single attachment row: preview/copy/rename/watermark/delete.
@@ -51,7 +52,7 @@ export default function AttachmentRowActions(props: {
       <Tooltip content="Rename" relationship="label">
         <Button size="small" icon={<Rename24Regular />} onClick={() => onOpenRename(attachment)} appearance="subtle" />
       </Tooltip>
-      {needsWatermark && (
+      {needsWatermark && WATERMARK_IMAGE_EXTS.includes(attachment.file_type) && (
         attachment.has_watermark ? (
           <Tooltip content="Delete watermark" relationship="label">
             <Button size="small" icon={<Eraser24Regular />} onClick={() => onRemoveWatermark && onRemoveWatermark(attachment)} appearance="subtle" />

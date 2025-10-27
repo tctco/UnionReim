@@ -2,7 +2,7 @@ import {
   QUILL_CN_FONT_SIZES,
   QUILL_NUMERIC_FONT_SIZES,
   QUILL_DEFAULT_FONT_FAMILY,
-  QUILL_DEFAULT_FONT_SIZE_PX,
+  QUILL_DEFAULT_FONT_SIZE_PT,
 } from './constants';
 
 export const DEFAULT_FONT_FAMILIES: string[] = [
@@ -49,24 +49,24 @@ export function getFontKeysAndCss(fontNames: string[], opts?: { includePickerLab
 
 export function getSizeTokensAndCss(opts?: { includePickerLabels?: boolean }): {
   tokens: string[];
-  pxToToken: Record<string, string>;
+  ptToToken: Record<string, string>;
   css: string;
 } {
   const includePickerLabels = !!opts?.includePickerLabels;
-  const cnEntries = QUILL_CN_FONT_SIZES.map((s, idx) => ({ token: `cn-${idx}`, px: s.value, label: s.label }));
+  const cnEntries = QUILL_CN_FONT_SIZES.map((s, idx) => ({ token: `cn-${idx}`, pt: s.value, label: s.label }));
   const numEntries = (QUILL_NUMERIC_FONT_SIZES as readonly string[]).map((v) => ({
     token: `n-${v.replace('.', '_')}`,
-    px: v,
-    label: v.replace('px', ''),
+    pt: v,
+    label: v.replace('pt', ''),
   }));
   const all = [...cnEntries, ...numEntries];
   const tokens = all.map((e) => e.token);
-  const pxToToken: Record<string, string> = {};
-  for (const e of all) pxToToken[e.px] = e.token;
+  const ptToToken: Record<string, string> = {};
+  for (const e of all) ptToToken[e.pt] = e.token;
 
   const css: string[] = [];
   for (const e of all) {
-    css.push(`.ql-size-${e.token}{font-size:${e.px}}`);
+    css.push(`.ql-size-${e.token}{font-size:${e.pt}}`);
     if (includePickerLabels) {
       css.push(
         `.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="${e.token}"]::before, .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="${e.token}"]::before{content:${JSON.stringify(
@@ -75,7 +75,7 @@ export function getSizeTokensAndCss(opts?: { includePickerLabels?: boolean }): {
       );
     }
   }
-  return { tokens, pxToToken, css: css.join('\n') };
+  return { tokens, ptToToken, css: css.join('\n') };
 }
 
 export function buildRuntimeCssForHtmlRender(fontNames?: string[], opts?: { noFontFallback?: boolean }): string {
@@ -85,7 +85,7 @@ export function buildRuntimeCssForHtmlRender(fontNames?: string[], opts?: { noFo
 
   const base: string[] = [];
   base.push(
-    `body{font-family:${JSON.stringify(QUILL_DEFAULT_FONT_FAMILY)};font-size:${QUILL_DEFAULT_FONT_SIZE_PX};padding:16px;}`,
+    `body{font-family:${JSON.stringify(QUILL_DEFAULT_FONT_FAMILY)};font-size:${QUILL_DEFAULT_FONT_SIZE_PT};padding:16px;}`,
   );
   base.push(`.ql-align-center{text-align:center}`);
   base.push(`.ql-align-right{text-align:right}`);

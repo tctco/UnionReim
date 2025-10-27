@@ -13,6 +13,7 @@ import {
     tokens,
 } from "@fluentui/react-components";
 import { TextBold24Regular, TextItalic24Regular, TextUnderline24Regular } from "@fluentui/react-icons";
+import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { useEffect, useRef, useState } from "react";
 import ColorPickerPopover from "../Common/ColorPickerPopover";
 
@@ -62,14 +63,18 @@ const useStyles = makeStyles({
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        background: tokens.colorNeutralBackground3,
+        // background: tokens.colorNeutralBackground3,
         borderRadius: tokens.borderRadiusMedium,
         padding: "8px",
         marginTop: "8px",
     },
+    zoomViewport: {
+        width: "100%",
+        height: "400px",
+        overflow: "hidden",
+    },
     canvas: {
         width: "100%",
-        maxWidth: "480px",
         height: "auto",
         borderRadius: tokens.borderRadiusSmall,
         border: `1px solid ${tokens.colorNeutralStroke1}`,
@@ -380,7 +385,27 @@ export default function WatermarkSettingsPanel(props: {
             </div>
 
             <div className={styles.previewWrap}>
-                <canvas ref={canvasRef} className={styles.canvas} />
+                <div className={styles.zoomViewport}>
+                    <TransformWrapper
+                        wheel={{
+                            step: 0.1,
+                            wheelDisabled: false,
+                        }}
+                        doubleClick={{ disabled: true }}
+                        pinch={{ disabled: false }}
+                        panning={{ velocityDisabled: true }}
+                        minScale={0.2}
+                        maxScale={4}
+                        limitToBounds={false}
+                    >
+                        <TransformComponent
+                            wrapperStyle={{ width: "100%", height: "100%" }}
+                            contentStyle={{ width: "100%", height: "100%" }}
+                        >
+                            <canvas ref={canvasRef} className={styles.canvas} />
+                        </TransformComponent>
+                    </TransformWrapper>
+                </div>
             </div>
         </div>
     );

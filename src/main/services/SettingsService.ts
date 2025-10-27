@@ -2,6 +2,9 @@ import type Database from "better-sqlite3";
 import { DatabaseService } from "../database/Database";
 import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 import type { AppSettings, WatermarkSettings } from "@common/types";
+import { DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM } from "@common/constants";
+import { basename, extname, join } from "path";
+import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "fs";
 
 export class SettingsService {
     private db: Database.Database;
@@ -20,6 +23,7 @@ export class SettingsService {
             hoverPreviewHeight: 400,
             // Default to a single resolved path constant in main
             defaultStoragePath: DEFAULT_STORAGE_PATH,
+            signatureImageHeightCm: DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM,
             // optional: defaultUserName, studentId, signatureImagePath are not set here
             watermark: {
                 textMode: 'template',
@@ -128,6 +132,7 @@ export class SettingsService {
             defaultUserName: allSettings.defaultUserName || undefined,
             studentId: allSettings.studentId || undefined,
             signatureImagePath: allSettings.signatureImagePath || undefined,
+            signatureImageHeightCm: allSettings.signatureImageHeightCm ? Number(allSettings.signatureImageHeightCm) : DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM,
             theme: (allSettings.theme as 'light' | 'dark' | 'system') || 'system',
             defaultStoragePath: allSettings.defaultStoragePath || undefined,
             language: allSettings.language || 'zh-CN',
@@ -172,5 +177,49 @@ export class SettingsService {
 
     setDefaultStoragePath(path: string): void {
         this.setSetting('defaultStoragePath', path);
+    }
+
+    /**
+     * Save signature image into app storage and update settings.signatureImagePath.
+     * Returns the relative path under storage root (e.g., "user/signature/sign_1690000000000.png").
+     */
+    saveSignatureFromPath(source_file_path: string, original_name?: string): string {
+        const storageRoot = this.getDefaultStoragePath() || DEFAULT_STORAGE_PATH;
+        const targetDir = join(storageRoot, "user", "signature");
+        if (!existsSync(targetDir)) {
+            mkdirSync(targetDir, { recursive: true });
+        }
+        const ext = extname(original_name || source_file_path) || ".png";
+        const base = basename(original_name || source_file_path, ext) || "signature";
+        const fileName = `${base}_${Date.now()}${ext}`;
+        const absDest = join(targetDir, fileName);
+        copyFileSync(source_file_path, absDest);
+        // store relative path for portability
+        const rel = ["user", "signature", fileName].join("/");
+        this.setSetting('signatureImagePath', rel);
+        return rel;
+    }
+
+    /**
+     * Save signature image from memory buffer into app storage.
+     * Returns the relative path under storage root.
+     */
+    saveSignatureFromBuffer(data: Buffer, original_name?: string, mime?: string): string {
+        const storageRoot = this.getDefaultStoragePath() || DEFAULT_STORAGE_PATH;
+        const targetDir = join(storageRoot, "user", "signature");
+        if (!existsSync(targetDir)) {
+            mkdirSync(targetDir, { recursive: true });
+        }
+        let ext = extname(original_name || "");
+        if (!ext) {
+            ext = mime === "image/jpeg" || mime === "image/jpg" ? ".jpg" : mime === "image/png" ? ".png" : ".png";
+        }
+        const base = (original_name ? basename(original_name, ext) : "signature") || "signature";
+        const fileName = `${base}_${Date.now()}${ext}`;
+        const absDest = join(targetDir, fileName);
+        writeFileSync(absDest, data);
+        const rel = ["user", "signature", fileName].join("/");
+        this.setSetting('signatureImagePath', rel);
+        return rel;
     }
 }

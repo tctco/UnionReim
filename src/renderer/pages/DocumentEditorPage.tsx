@@ -107,7 +107,6 @@ export function DocumentEditorPage() {
             if (created && hasId(created)) {
                 // 保存成功后重置快照，避免导航被阻止
                 setInitialSnapshot({ name, description, html });
-                navigate(`/documents/${created.document_id}`);
             }
             return;
         }
@@ -121,7 +120,6 @@ export function DocumentEditorPage() {
             if (updated && hasId(updated)) {
                 // 保存成功后重置快照，避免导航被阻止
                 setInitialSnapshot({ name, description, html });
-                navigate(`/documents/${updated.document_id}`);
             }
         }
     };

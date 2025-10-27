@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         update: (request) => ipcRenderer.invoke("settings:update", request),
         getSetting: (key) => ipcRenderer.invoke("settings:getSetting", key),
         setSetting: (key, value) => ipcRenderer.invoke("settings:setSetting", key, value),
+        signatureUploadFromPath: (payload: { path: string; original_name?: string }) => ipcRenderer.invoke("settings:signatureUploadFromPath", payload),
+        signatureUploadFromData: (payload: { data: number[]; name?: string; mime?: string }) => ipcRenderer.invoke("settings:signatureUploadFromData", payload),
     },
 
     // System utilities

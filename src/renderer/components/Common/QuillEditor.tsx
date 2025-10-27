@@ -2,7 +2,7 @@ import { Spinner } from "@fluentui/react-components";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { QUILL_DEFAULT_FONT_FAMILY, QUILL_DEFAULT_FONT_SIZE_PX } from "../../../common/constants";
+import { QUILL_DEFAULT_FONT_FAMILY, QUILL_DEFAULT_FONT_SIZE_PT } from "../../../common/constants";
 import { DEFAULT_FONT_FAMILIES, getFontKeysAndCss, getSizeTokensAndCss } from "../../../common/quillStyle";
 import { WATERMARK_PLACEHOLDERS } from "../../../common/watermarkPlaceholders";
 import { useI18n } from "../../i18n";
@@ -172,7 +172,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             (quill.root as HTMLElement).style.padding = "4px 8px";
             // Apply default editor font and size
             (quill.root as HTMLElement).style.fontFamily = QUILL_DEFAULT_FONT_FAMILY;
-            (quill.root as HTMLElement).style.fontSize = QUILL_DEFAULT_FONT_SIZE_PX;
+            (quill.root as HTMLElement).style.fontSize = QUILL_DEFAULT_FONT_SIZE_PT;
             if (placeholder) quill.root.setAttribute("data-placeholder", placeholder);
 
             localRef.current = quill;
@@ -232,11 +232,11 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
 
             // Ensure toolbar default shows 14px label (numeric) regardless of first option order
             try {
-                const defaultSizeToken = `n-${QUILL_DEFAULT_FONT_SIZE_PX.replace(".", "_")}`;
+                const defaultSizeToken = `n-${QUILL_DEFAULT_FONT_SIZE_PT.replace(".", "_")}`;
                 // Set a collapsed selection to apply active format for upcoming input and reflect in toolbar
-                quill.setSelection(0, 0, Quill.sources.SILENT);
+                quill.setSelection(1, 1, Quill.sources.SILENT);
                 quill.format("size", defaultSizeToken, Quill.sources.SILENT);
-            } catch {}
+            } catch {console.error("Failed to set default size token");}
 
             const handler = () => {
                 let html = "";

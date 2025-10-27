@@ -7,14 +7,18 @@ import { ProjectService } from './ProjectService';
 import { buildRuntimeCssForHtmlRender } from '@common/quillStyle';
 import { getFonts } from 'font-list';
 import { A4_WIDTH_PT, A4_HEIGHT_PT } from '@common/constants';
+import { SettingsService } from './SettingsService';
+import { toReimbursementUrlFromRelative } from '@common/urlHelpers';
 
 export class PrintService {
   private projectService: ProjectService;
   private attachmentService: AttachmentService;
+  private settingsService: SettingsService;
 
   constructor() {
     this.projectService = new ProjectService();
     this.attachmentService = new AttachmentService();
+    this.settingsService = new SettingsService();
   }
 
   /**
@@ -99,14 +103,14 @@ export class PrintService {
     const storageRoot = this.attachmentService.getStoragePath();
     const outDir = join(storageRoot, String(project_id), 'print');
     if (!existsSync(outDir)) {
-      try { mkdirSync(outDir, { recursive: true }); } catch {}
+      try { mkdirSync(outDir, { recursive: true }); } catch { /* noop */ }
     }
     const outPath = join(outDir, `${safeName}.pdf`);
 
     const outputBytes = await pdf.save();
     try {
       writeFileSync(outPath, outputBytes);
-    } catch (e) {
+    } catch {
       throw new Error('Failed to write merged PDF to project folder');
     }
 
@@ -135,21 +139,39 @@ export class PrintService {
   */
   async htmlToPdfForProject(project_id: number, name: string, html: string): Promise<string> {
     const win = new BrowserWindow({ show: false });
+    // Replace signature image placeholder if present
+    try {
+      const appSettings = this.settingsService.getAppSettings();
+      const sigRel = appSettings.signatureImagePath;
+      const heightCm = appSettings.signatureImageHeightCm && appSettings.signatureImageHeightCm > 0
+        ? appSettings.signatureImageHeightCm
+        : 2;
+      if (sigRel) {
+        const sigUrl = toReimbursementUrlFromRelative(sigRel);
+        // Use absolute positioning and pointer-events none to avoid affecting layout or interaction
+        const style = `position:relative;`;
+        const overlay = `<img src="${sigUrl}" alt="signature" style="position:absolute; height:${heightCm}cm; pointer-events:none; z-index:-1;" />`;
+        // Wrap placeholder with container to ensure absolute positioning context
+        html = html.replace(/\{signatureImage\}/g, `<span style="${style}">${overlay}</span>`);
+      } else {
+        html = html.replace(/\{signatureImage\}/g, "");
+      }
+    } catch { /* noop */ }
     let systemFonts: string[] = [];
     try {
       systemFonts = await getFonts({ disableQuoting: true });
-    } catch {}
+    } catch { /* noop */ }
     const quillCss = buildRuntimeCssForHtmlRender(systemFonts, { noFontFallback: true });
     const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8" />\n<style>\n${quillCss}\n</style>\n</head><body>\n${html}\n</body></html>`;
     const content = `data:text/html;charset=utf-8,${encodeURIComponent(fullHtml)}`;
     await win.loadURL(content);
     const pdf = await win.webContents.printToPDF({ printBackground: true });
-    setTimeout(() => { try { if (!win.isDestroyed()) win.close(); } catch {} }, 100);
+    setTimeout(() => { try { if (!win.isDestroyed()) win.close(); } catch { /* noop */ } }, 100);
 
     const storageRoot = this.attachmentService.getStoragePath();
     const outDir = join(storageRoot, String(project_id), 'documents');
     if (!existsSync(outDir)) {
-      try { mkdirSync(outDir, { recursive: true }); } catch {}
+      try { mkdirSync(outDir, { recursive: true }); } catch { /* noop */ }
     }
     const safe = (name || 'document').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/g, '_');
     const outPath = join(outDir, `${safe}.pdf`);
