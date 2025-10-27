@@ -7,18 +7,8 @@ import {
 } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
 import type { AppSettings } from "@common/types";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Outlet } from "react-router";
 import { AppLayout } from "./components/Layout/AppLayout";
-import { ProjectEditorPage } from "./pages/ProjectEditorPage";
-import { ProjectListPage } from "./pages/ProjectListPage";
-import { ProjectPreviewPage } from "./pages/ProjectPreviewPage";
-import { PrintPreviewPage } from "./pages/PrintPreviewPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { TemplateEditorPage } from "./pages/TemplateEditorPage";
-import { TemplateListPage } from "./pages/TemplateListPage";
-import { TemplateViewPage } from "./pages/TemplateViewPage";
-import { DocumentListPage } from "./pages/DocumentListPage";
-import { DocumentEditorPage } from "./pages/DocumentEditorPage";
 import { GLOBAL_TOASTER_ID } from "./utils/toastHelpers";
 
 const shouldUseDarkColors = (): boolean => window.ContextBridge.themeShouldUseDarkColors();
@@ -69,23 +59,7 @@ export const App = () => {
             {/* Global toaster to persist across route changes */}
             <Toaster toasterId={GLOBAL_TOASTER_ID} />
             <AppLayout>
-                <Routes>
-                    <Route path="/" element={<Navigate to="/projects" replace />} />
-                    <Route path="/templates" element={<TemplateListPage />} />
-                    <Route path="/templates/new" element={<TemplateEditorPage />} />
-                    <Route path="/templates/:id" element={<TemplateViewPage />} />
-                    <Route path="/templates/:id/edit" element={<TemplateEditorPage />} />
-                    <Route path="/documents" element={<DocumentListPage />} />
-                    <Route path="/documents/new" element={<DocumentEditorPage />} />
-                    <Route path="/documents/:id" element={<DocumentEditorPage />} />
-                    <Route path="/projects" element={<ProjectListPage />} />
-                    <Route path="/projects/new" element={<ProjectEditorPage />} />
-                    <Route path="/projects/:id" element={<ProjectPreviewPage />} />
-                    <Route path="/projects/:id/print" element={<PrintPreviewPage />} />
-                    <Route path="/projects/:id/edit" element={<ProjectEditorPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="*" element={<Navigate to="/templates" replace />} />
-                </Routes>
+                <Outlet />
             </AppLayout>
         </FluentProvider>
     );

@@ -165,6 +165,7 @@ export default {
   projects: {
     title: "Projects",
     loading: "Loading projects...",
+    loadingOne: "Loading project...",
     importProject: "Import Project",
     newProject: "New Project",
     searchPlaceholder: "Search projects...",
@@ -178,6 +179,12 @@ export default {
     deleteDialogMessage: "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
     exportSuccess: "Project exported successfully!",
     importSuccess: "Project imported successfully!",
+    infoTitle: "Project Information",
+    template: "Template",
+    status: "Status",
+    description: "Description",
+    materials: "Materials",
+    noFiles: "No files uploaded",
   },
   breadcrumbs: {
     templates: "Templates",
@@ -200,5 +207,18 @@ export default {
     tagline: "Manage your reimbursement materials",
     expand: "Expand sidebar",
     collapse: "Collapse sidebar",
+  }
+  ,
+  attachments: {
+    table: {
+      fileName: "File Name",
+      size: "Size",
+      type: "Type",
+      status: "Status",
+    },
+    status: {
+      watermarked: "Watermarked",
+      original: "Original",
+    }
   }
 } as const;

@@ -22,6 +22,7 @@ import AttachmentHoverPreview from "../components/Preview/AttachmentHoverPreview
 import type { AppSettings, Attachment } from "@common/types";
 import { useEffect, useState } from "react";
 import { DEFAULT_HOVER_PREVIEW } from "@common/constants";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: {
@@ -88,6 +89,7 @@ export function ProjectPreviewPage() {
     const { id } = useParams<{ id: string }>();
     const projectId = parseInt(id || "0");
     const navigate = useNavigate();
+    const { t } = useI18n();
 
     const { project, loading } = useProject(projectId);
     const { exportProject } = useProjects();
@@ -126,7 +128,7 @@ export function ProjectPreviewPage() {
     const handleExport = async () => {
         try {
             await exportProject(projectId);
-            alert("Project exported successfully!");
+            alert(t("projects.exportSuccess"));
         } catch (err) {
             console.error("Failed to export project:", err);
         }
@@ -140,7 +142,7 @@ export function ProjectPreviewPage() {
         return (
             <div className={styles.container}>
                 <div style={{ textAlign: "center", padding: "64px" }}>
-                    <Spinner size="large" label="Loading project..." />
+                    <Spinner size="large" label={t("projects.loadingOne")} />
                 </div>
             </div>
         );
@@ -155,43 +157,43 @@ export function ProjectPreviewPage() {
                         icon={<Edit24Regular />}
                         onClick={() => navigate(`/projects/${projectId}/edit`)}
                     >
-                        Edit
+                        {t("common.edit")}
                     </Button>
                     <Button onClick={handlePrint} icon={<Print24Regular />}>
-                        Print
+                        {t("nav.print")}
                     </Button>
                     <Button
                         appearance="primary"
                         icon={<ArrowUpload24Regular />}
                         onClick={handleExport}
                     >
-                        Export
+                        {t("projects.export")}
                     </Button>
                 </div>
             </div>
 
             <div className={styles.metadata}>
-                <Title3>Project Information</Title3>
+                <Title3>{t("projects.infoTitle")}</Title3>
                 <div className={styles.metadataGrid}>
                     <div className={styles.metadataItem}>
-                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>Creator</Caption1>
+                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.creator")}</Caption1>
                         <Body1>{project.creator || "Not specified"}</Body1>
                     </div>
                     <div className={styles.metadataItem}>
-                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>Template</Caption1>
+                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.template")}</Caption1>
                         <Body1>{project.template.name}</Body1>
                     </div>
                     <div className={styles.metadataItem}>
-                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>Created</Caption1>
+                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.created")}</Caption1>
                         <Body1>{new Date(project.create_time).toLocaleString()}</Body1>
                     </div>
                     <div className={styles.metadataItem}>
-                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>Status</Caption1>
+                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.status")}</Caption1>
                         <Body1>{project.status}</Body1>
                     </div>
                     {project.metadata?.description && (
                         <div className={styles.metadataItem} style={{ gridColumn: "1 / -1" }}>
-                            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>Description</Caption1>
+                            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.description")}</Caption1>
                             <Body1>{project.metadata.description}</Body1>
                         </div>
                     )}
@@ -199,7 +201,7 @@ export function ProjectPreviewPage() {
             </div>
 
             <div className={styles.itemsSection}>
-                <Title3 style={{ marginBottom: "16px" }}>Materials</Title3>
+                <Title3 style={{ marginBottom: "16px" }}>{t("projects.materials")}</Title3>
 
                 {project.items.map((item) => (
                     <Card key={item.project_item_id} className={styles.itemCard}>
@@ -214,16 +216,16 @@ export function ProjectPreviewPage() {
 
                         {item.attachments.length === 0 ? (
                             <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                                No files uploaded
+                                {t("projects.noFiles")}
                             </Caption1>
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHeaderCell>File Name</TableHeaderCell>
-                                        <TableHeaderCell>Size</TableHeaderCell>
-                                        <TableHeaderCell>Type</TableHeaderCell>
-                                        <TableHeaderCell>Status</TableHeaderCell>
+                                        <TableHeaderCell>{t("attachments.table.fileName")}</TableHeaderCell>
+                                        <TableHeaderCell>{t("attachments.table.size")}</TableHeaderCell>
+                                        <TableHeaderCell>{t("attachments.table.type")}</TableHeaderCell>
+                                        <TableHeaderCell>{t("attachments.table.status")}</TableHeaderCell>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -247,10 +249,10 @@ export function ProjectPreviewPage() {
                                             <TableCell>
                                                 {attachment.has_watermark ? (
                                                     <Caption1 style={{ color: tokens.colorPaletteGreenForeground1 }}>
-                                                        ✓ Watermarked
+                                                        ✓ {t("attachments.status.watermarked")}
                                                     </Caption1>
                                                 ) : (
-                                                    <Caption1>Original</Caption1>
+                                                    <Caption1>{t("attachments.status.original")}</Caption1>
                                                 )}
                                             </TableCell>
                                         </TableRow>

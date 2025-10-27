@@ -165,6 +165,7 @@ export default {
   projects: {
     title: "项目",
     loading: "正在加载项目...",
+    loadingOne: "正在加载项目...",
     importProject: "导入项目",
     newProject: "新建项目",
     searchPlaceholder: "搜索项目...",
@@ -178,6 +179,12 @@ export default {
     deleteDialogMessage: "确定要删除“{name}”吗？该操作无法撤销。",
     exportSuccess: "项目导出成功！",
     importSuccess: "项目导入成功！",
+    infoTitle: "项目信息",
+    template: "模板",
+    status: "状态",
+    description: "描述",
+    materials: "材料",
+    noFiles: "尚未上传文件",
   },
   breadcrumbs: {
     templates: "模板",
@@ -200,5 +207,18 @@ export default {
     tagline: "管理您的报销材料",
     expand: "展开侧边栏",
     collapse: "收起侧边栏",
+  }
+  ,
+  attachments: {
+    table: {
+      fileName: "文件名",
+      size: "大小",
+      type: "类型",
+      status: "状态",
+    },
+    status: {
+      watermarked: "已加水印",
+      original: "原始",
+    }
   }
 } as const;

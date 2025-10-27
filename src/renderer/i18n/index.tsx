@@ -4,22 +4,27 @@ import zh from "./locales/zh";
 
 type Locale = "en" | "zh";
 
-type Dict = typeof en;
+type Dict = Record<string, unknown>;
 
-const DICTS: Record<Locale, Dict> = { en, zh };
+const DICTS: Record<Locale, Dict> = { en: en as unknown as Dict, zh: zh as unknown as Dict };
 
-function get(obj: any, path: string) {
-  return path.split(".").reduce((acc, key) => (acc && key in acc ? acc[key] : undefined), obj);
+function get(obj: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === "object" && key in (acc as Record<string, unknown>)) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
-function interpolate(str: string, params?: Record<string, any>) {
+function interpolate(str: string, params?: Record<string, unknown>) {
   if (!params) return str;
-  return str.replace(/\{(\w+)\}/g, (_, k) => (params[k] ?? ""));
+  return str.replace(/\{(\w+)\}/g, (_, k) => (params[k] as string | undefined) ?? "");
 }
 
 export interface I18nContextValue {
   locale: Locale;
-  t: (key: string, params?: Record<string, any>) => string;
+  t: (key: string, params?: Record<string, unknown>) => string;
   setLocale: (locale: Locale) => void;
 }
 
@@ -51,13 +56,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const dict = DICTS[locale] || en;
 
   const t = useMemo(() => {
-    return (key: string, params?: Record<string, any>) => {
+    return (key: string, params?: Record<string, unknown>) => {
       const val = get(dict, key);
       if (typeof val === "string") return interpolate(val, params);
       // fallback to key for visibility when missing
       return interpolate(key, params);
     };
   }, [dict]);
+  
 
   const value = useMemo<I18nContextValue>(() => ({ locale, t, setLocale }), [locale, t]);
 
@@ -70,9 +76,10 @@ export function useI18n() {
   return ctx;
 }
 
-export function t(key: string, params?: Record<string, any>) {
+export function t(key: string, params?: Record<string, unknown>) {
   // Convenience for non-hook contexts; default to English
-  const val = get(en, key) ?? key;
-  return interpolate(val as string, params);
+  const val = get(en, key);
+  if (typeof val === "string") return interpolate(val, params);
+  return interpolate(key, params);
 }
 
