@@ -19,6 +19,7 @@ export default {
     print: "打印",
     documents: "文档",
     browse: "浏览",
+    selectPlaceholder: "选择...",
   },
   documents: {
     title: "文档",
@@ -35,6 +36,11 @@ export default {
     loadingOne: "正在加载文档...",
     nameRequired: "名称不能为空",
     placeholdersTip: "支持占位符：{list}",
+    deleteDialogTitle: "删除文档",
+    deleteDialogMessage: "确定要删除“{name}”吗？该操作无法撤销。",
+    generateAndUploadPdf: "生成并上传 PDF",
+    selectTemplate: "选择模板",
+    fromTemplateTitle: "从模板生成文档",
   },
   printPreview: {
     generating: "正在生成 PDF...",

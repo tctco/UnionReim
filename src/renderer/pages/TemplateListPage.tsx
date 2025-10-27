@@ -14,10 +14,12 @@ import {
     Title3,
     tokens,
 } from "@fluentui/react-components";
-import { Add24Regular, Search24Regular, ArrowDownload24Regular } from "@fluentui/react-icons";
+import { Add24Regular, ArrowDownload24Regular } from "@fluentui/react-icons";
 import { useState } from "react";
+import type { InputOnChangeData } from "@fluentui/react-components";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import { SearchRow } from "../components/Common/SearchRow";
 import { TemplateCard } from "../components/Template/TemplateCard";
 import { useTemplates } from "../hooks/useTemplates";
 import { useI18n } from "../i18n";
@@ -163,17 +165,15 @@ export function TemplateListPage() {
                 </div>
             </div>
 
-            <div className={styles.searchBar}>
-                <Input
-                    className={styles.searchInput}
-                    placeholder={t("templates.searchPlaceholder")}
-                    value={searchText}
-                    onChange={(_, data) => setSearchText(data.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                    contentBefore={<Search24Regular />}
-                />
-                <Button onClick={handleSearch}>{t("common.search")}</Button>
-            </div>
+            <SearchRow
+                value={searchText}
+                onChange={setSearchText}
+                onSearch={handleSearch}
+                placeholder={t("templates.searchPlaceholder")}
+                buttonText={t("common.search")}
+                className={styles.searchBar}
+                inputClassName={styles.searchInput}
+            />
 
             {error && (
                 <div style={{ color: tokens.colorPaletteRedForeground1, marginBottom: "16px" }}>
@@ -214,7 +214,7 @@ export function TemplateListPage() {
                             <DialogContent>
                                 <Input
                                     value={cloneName}
-                                    onChange={(_, data) => setCloneName(data.value)}
+                                    onChange={(_ev: React.ChangeEvent<HTMLInputElement>, data: InputOnChangeData) => setCloneName(data.value)}
                                     placeholder={t("templates.cloneDialogPlaceholder")}
                                 />
                             </DialogContent>

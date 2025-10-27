@@ -1,9 +1,10 @@
 import type { Project } from "@common/types";
-import { Body1, Button, Input, makeStyles, Spinner, Title3, tokens } from "@fluentui/react-components";
-import { Add24Regular, Search24Regular } from "@fluentui/react-icons";
+import { Body1, Button, makeStyles, Spinner, Title3, tokens } from "@fluentui/react-components";
+import { Add24Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import { SearchRow } from "../components/Common/SearchRow";
 import ProjectCard from "../components/Project/ProjectCard";
 import { useProjects } from "../hooks/useProjects";
 import { useI18n } from "../i18n";
@@ -137,17 +138,15 @@ export function ProjectListPage() {
                 </div>
             </div>
 
-            <div className={styles.searchBar}>
-                <Input
-                    className={styles.searchInput}
-                    placeholder={t("projects.searchPlaceholder")}
-                    value={searchText}
-                    onChange={(_, data) => setSearchText(data.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    contentBefore={<Search24Regular />}
-                />
-                <Button onClick={handleSearch}>{t("common.search")}</Button>
-            </div>
+            <SearchRow
+                value={searchText}
+                onChange={setSearchText}
+                onSearch={handleSearch}
+                placeholder={t("projects.searchPlaceholder")}
+                buttonText={t("common.search")}
+                className={styles.searchBar}
+                inputClassName={styles.searchInput}
+            />
 
             {error && (
                 <div style={{ color: tokens.colorPaletteRedForeground1, marginBottom: "16px" }}>

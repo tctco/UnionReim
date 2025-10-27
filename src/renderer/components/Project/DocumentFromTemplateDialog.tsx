@@ -136,7 +136,7 @@ export default function DocumentFromTemplateDialog(props: {
                                 <Field label={t("documents.selectTemplate")}>
                                     <Select value={selectedId} onChange={(_, d) => onSelectTemplate(d.value)}>
                                         <option value="" disabled>
-                                            {t("documents.selectPlaceholder")}
+                                            {t("common.selectPlaceholder")}
                                         </option>
                                         {templates.map((t) => (
                                             <option key={t.document_id} value={String(t.document_id)}>
@@ -150,14 +150,14 @@ export default function DocumentFromTemplateDialog(props: {
                                 <QuillEditor
                                     key={(selectedId || "").length + (baseHtml || "").length}
                                     initialHtml={previewHtml}
-                                    minHeight={420}
+                                    minHeight={240}
                                 />
                             </div>
                         </div>
                     </DialogContent>
                     <DialogActions>
                         <Button appearance="secondary" onClick={() => onOpenChange(false)}>
-                            {t("documents.cancel")}
+                            {t("common.cancel")}
                         </Button>
                         <Button appearance="primary" onClick={uploadPdf} disabled={!selectedId || loading}>
                             {t("documents.generateAndUploadPdf")}

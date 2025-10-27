@@ -1,11 +1,14 @@
-import { Body1, Button, Caption1, Card, CardHeader, Input, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, Toaster, makeStyles, tokens } from "@fluentui/react-components";
-import { Delete24Regular, MoreVertical24Regular, Search24Regular } from "@fluentui/react-icons";
+﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, Toaster, makeStyles, tokens } from "@fluentui/react-components";
+import { Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
+import { Add24Regular } from "@fluentui/react-icons";
 import type { DocumentTemplate } from "@common/types";
 import { useNavigate } from "react-router";
 import { useDocumentTemplates } from "../hooks/useDocuments";
 import { useDeleteHandler } from "../utils/toastHelpers";
 import { useI18n } from "../i18n";
+import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import { SearchRow } from "../components/Common/SearchRow";
 
 const useStyles = makeStyles({
     container: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
@@ -18,35 +21,6 @@ const useStyles = makeStyles({
 });
 
 type DocumentItem = DocumentTemplate;
-
-function SearchRow({
-    value,
-    onChange,
-    onSearch,
-    className,
-    inputClassName,
-}: {
-    value: string;
-    onChange: (v: string) => void;
-    onSearch: () => void;
-    className: string;
-    inputClassName: string;
-}) {
-    const { t } = useI18n();
-    return (
-        <div className={className}>
-            <Input
-                className={inputClassName}
-                placeholder={t("documents.searchPlaceholder")}
-                value={value}
-                onChange={(_, d) => onChange(d.value)}
-                onKeyDown={(e) => e.key === "Enter" && onSearch()}
-                contentBefore={<Search24Regular />}
-            />
-            <Button onClick={onSearch}>{t("common.search")}</Button>
-        </div>
-    );
-}
 
 function DocumentActions({ onDelete, onOpenMenu }: { onDelete: (e: React.MouseEvent) => void; onOpenMenu: (e: React.MouseEvent) => void }) {
     const { t } = useI18n();
@@ -98,12 +72,8 @@ export function DocumentListPage() {
     const { documents, loading, loadDocuments, deleteDocument } = useDocumentTemplates();
     const { t } = useI18n();
     const [search, setSearch] = useState("");
-    const delWithToast = useDeleteHandler({
-        successTitle: "删除成功",
-        successMessage: "文档已删除",
-        errorTitle: "删除失败",
-        errorMessage: "无法删除文档",
-    });
+    const delWithToast = useDeleteHandler();
+    const [deleteDialogDoc, setDeleteDialogDoc] = useState<DocumentItem | null>(null);
 
     useEffect(() => {
         loadDocuments(search ? { search } : undefined);
@@ -118,11 +88,18 @@ export function DocumentListPage() {
             <Toaster />
             <div className={styles.header}>
                 <Title3>{t("documents.title")}</Title3>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <Button appearance="primary" icon={<Add24Regular />} onClick={() => navigate("/documents/new")}>
+                        {t("nav.newDocument")}
+                    </Button>
+                </div>
             </div>
             <SearchRow
                 value={search}
                 onChange={setSearch}
                 onSearch={handleSearch}
+                placeholder={t("documents.searchPlaceholder")}
+                buttonText={t("common.search")}
                 className={styles.searchBar}
                 inputClassName={styles.searchInput}
             />
@@ -136,11 +113,27 @@ export function DocumentListPage() {
                             className={styles.card}
                             contentClassName={styles.cardContent}
                             onOpen={() => handleOpen(d.document_id)}
-                            onDelete={() => handleDelete(d.document_id)}
+                            onDelete={() => setDeleteDialogDoc(d)}
                         />
                     ))}
                 </div>
             )}
+            <ConfirmDialog
+                title={t("documents.deleteDialogTitle")}
+                message={deleteDialogDoc ? t("documents.deleteDialogMessage", { name: deleteDialogDoc.name }) : ""}
+                confirmText={t("common.delete")}
+                cancelText={t("common.cancel")}
+                onConfirm={() => {
+                    if (deleteDialogDoc) {
+                        handleDelete(deleteDialogDoc.document_id);
+                    }
+                    setDeleteDialogDoc(null);
+                }}
+                onCancel={() => setDeleteDialogDoc(null)}
+                open={!!deleteDialogDoc}
+                onOpenChange={(open) => !open && setDeleteDialogDoc(null)}
+                destructive
+            />
         </div>
     );
 }

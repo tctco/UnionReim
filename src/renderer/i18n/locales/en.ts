@@ -19,6 +19,7 @@ export default {
     print: "Print",
     documents: "Documents",
     browse: "Browse",
+    selectPlaceholder: "Select...",
   },
   documents: {
     title: "Documents",
@@ -26,6 +27,8 @@ export default {
     loading: "Loading...",
     updated: "Updated",
     delete: "Delete",
+    deleteDialogTitle: "Delete Document",
+    deleteDialogMessage: "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
     editorNewTitle: "New Document",
     editorEditTitle: "Edit Document",
     editorCancel: "Cancel",
@@ -35,6 +38,9 @@ export default {
     loadingOne: "Loading document...",
     nameRequired: "Name is required",
     placeholdersTip: "Supported placeholders: {list}",
+    generateAndUploadPdf: "Generate and Upload PDF",
+    selectTemplate: "Select Template",
+    fromTemplateTitle: "Generate Document from Template",
   },
   printPreview: {
     generating: "Generating PDF...",
