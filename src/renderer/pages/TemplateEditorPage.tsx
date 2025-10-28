@@ -21,6 +21,7 @@ import { useSaveHandler } from "../utils/toastHelpers";
 import type { TemplateItem } from "@common/types";
 import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 import { useI18n } from "../i18n";
+import TokenAutocompleteInput from "../components/Common/TokenAutocompleteInput";
 
 const useStyles = makeStyles({
     container: {
@@ -297,19 +298,20 @@ export function TemplateEditorPage() {
                                         }
                                         style={{ marginTop: "12px" }}
                                     >
-                                        <Input
+                                        <TokenAutocompleteInput
                                             value={item.watermark_template || ""}
-                                            onChange={(_, data) => {
+                                            onChange={(next) => {
                                                 setItems(prevItems =>
                                                     prevItems.map(i =>
                                                         i.item_id === item.item_id
-                                                            ? { ...i, watermark_template: data.value }
+                                                            ? { ...i, watermark_template: next }
                                                             : i
                                                     )
                                                 );
                                             }}
-                                            onBlur={(e) => handleUpdateItem(item.item_id!, "watermark_template", e.target.value)}
+                                            onBlur={(e) => handleUpdateItem(item.item_id!, "watermark_template", e.currentTarget.value)}
                                             placeholder={t("templates.wmTemplatePlaceholder")}
+                                            style={{ width: "100%" }}
                                         />
                                     </Field>
                                 )}

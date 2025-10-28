@@ -25,7 +25,9 @@ const useStyles = makeStyles({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: tokens.colorNeutralBackground1,
-        minHeight: "100%",
+        height: "100%",
+        marginLeft: "32px",
+        marginRight: "32px",
     },
     logoSection: {
         display: "flex",
@@ -56,7 +58,7 @@ const useStyles = makeStyles({
     cardsContainer: {
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-        ...shorthands.gap("24px"),
+        ...shorthands.gap("12px"),
         width: "100%",
         maxWidth: "1200px",
         marginBottom: "40px",
