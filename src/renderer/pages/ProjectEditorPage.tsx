@@ -26,7 +26,7 @@ import FileUploader from "../components/Common/FileUploader";
 import ProjectItemCard from "../components/Project/ProjectItemCard";
 import DocumentFromTemplateDialog from "../components/Project/DocumentFromTemplateDialog";
 import { useProject, useProjects } from "../hooks/useProjects";
-import { useDocumentTemplates, useProjectDocuments } from "../hooks/useDocuments";
+import { useProjectDocuments } from "../hooks/useDocuments";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
 
@@ -98,11 +98,10 @@ export function ProjectEditorPage() {
     const projectId = isNew ? null : parseInt(id || "0");
 
     const { templates } = useTemplates();
-    const { documents } = useDocumentTemplates();
     const { createProject, updateProject } = useProjects(); 
     const { project, loading, loadProject, checkComplete } = useProject(projectId);
-    const { docs: projectDocs, load: loadProjectDocs, create: createProjectDoc, remove: removeProjectDoc } = useProjectDocuments(projectId);
-    const { uploadAttachment, deleteAttachment, applyWatermark, applyWatermarkWithOptions, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
+    const { load: loadProjectDocs } = useProjectDocuments(projectId);
+    const { uploadAttachment, deleteAttachment, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
     const { dispatchToast } = useToastController();
 
     const [name, setName] = useState("");

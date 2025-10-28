@@ -89,6 +89,7 @@ export default {
     userSettings: "User Settings",
     appearance: "Appearance",
     files: "Files",
+    preferences: "Preferences",
     preview: "Preview",
     language: "Language",
     migrateTitle: "Migrate Files",
@@ -100,9 +101,15 @@ export default {
     resetBtn: "Reset",
     watermarkPreview: "Watermark Preview",
   },
+  preferences: {
+    storageRootLabel: "Default storage path",
+    autoWatermarkLabel: "Auto watermark images on upload",
+    autoWatermarkHelp: "When enabled, image files ({exts}) will be watermarked automatically upon upload, using current watermark settings.",
+  },
   previewSettings: {
     widthLabel: "Preview width (px)",
     heightLabel: "Preview height (px)",
+    sizeHelp: "Sets the maximum size of the hover preview. Images scale to fit; PDFs use the maximum bounds. Actual size also depends on your screen.",
   },
   appearance: {
     followSystem: "Follow System",

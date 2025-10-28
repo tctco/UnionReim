@@ -7,21 +7,16 @@ import {
     makeStyles,
     tokens,
     Toaster,
+    Title3,
 } from "@fluentui/react-components";
-import {
-    Folder24Regular,
-    Person24Regular,
-    DarkTheme24Regular,
-    Settings24Regular,
-} from "@fluentui/react-icons";
+import { LocalLanguage24Regular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
 import { useSaveHandler } from "../utils/toastHelpers";
 import type { AppSettings, WatermarkSettings } from "@common/types";
 import WatermarkSettingsPanel from "../components/Settings/WatermarkSettingsPanel";
 import UserSettingsPanel from "../components/Settings/UserSettingsPanel";
 import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPanel";
-import FileSettingsPanel from "../components/Settings/FileSettingsPanel";
-import PreviewSettingsPanel from "../components/Settings/PreviewSettingsPanel";
+import PreferenceSettingsPanel from "../components/Settings/PreferenceSettingsPanel";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import LanguageSettingsPanel from "../components/Settings/LanguageSettingsPanel";
 import { useI18n } from "../i18n";
@@ -30,12 +25,13 @@ import { useI18n } from "../i18n";
 const useStyles = makeStyles({
     container: {
         padding: "24px",
-        maxWidth: "800px",
+        maxWidth: "1400px",
         margin: "0 auto",
     },
     header: {
         marginBottom: "24px",
         display: "flex",
+        justifyContent: "space-between",
         alignItems: "center",
         gap: "12px",
     },
@@ -292,23 +288,29 @@ export function SettingsPage() {
             />
             
             <div className={styles.header}>
-                <Settings24Regular />
-                <h1 className={styles.title}>{t("settings.title")}</h1>
+                <Title3>{t("settings.title")}</Title3>
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <Button 
+                        appearance="secondary" 
+                        onClick={handleReset}
+                        disabled={!hasChanges || saving}
+                    >
+                        {t("settings.resetBtn")}
+                    </Button>
+                    <Button 
+                        appearance="primary" 
+                        onClick={handleSave}
+                        disabled={!hasChanges || saving}
+                    >
+                        {saving ? t("settings.saving") : t("settings.saveBtn")}
+                    </Button>
+                </div>
             </div>
 
-            <Accordion multiple collapsible defaultOpenItems={["wm", "user", "appearance", "files", "preview", "language"]}>
-                <AccordionItem value="wm">
-                    <AccordionHeader>
-                        <Settings24Regular />&nbsp;{t("settings.watermark")}
-                    </AccordionHeader>
-                    <AccordionPanel>
-                        <WatermarkSettingsPanel wm={wm} fonts={fonts} onChange={updateWatermark} />
-                    </AccordionPanel>
-                </AccordionItem>
-                    
+            <Accordion multiple collapsible defaultOpenItems={["user"]}>
                 <AccordionItem value="user">
                     <AccordionHeader>
-                        <Person24Regular />&nbsp;{t("settings.userSettings")}
+                        {t("settings.userSettings")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <UserSettingsPanel
@@ -320,55 +322,58 @@ export function SettingsPage() {
                     />
                     </AccordionPanel>
                 </AccordionItem>
-
                 <AccordionItem value="appearance">
                     <AccordionHeader>
-                        <DarkTheme24Regular />&nbsp;{t("settings.appearance")}
+                        {t("settings.appearance")}
                     </AccordionHeader>
                     <AccordionPanel>
                     <AppearanceSettingsPanel
                         theme={formData.theme as 'light'|'dark'|'system' | undefined}
-                        onChange={(t) => setFormData({ ...formData, theme: t })}
+                        previewWidth={formData.hoverPreviewWidth}
+                        previewHeight={formData.hoverPreviewHeight}
+                        onThemeChange={(t) => setFormData({ ...formData, theme: t })}
+                        onPreviewChange={(p) => setFormData({ ...formData, hoverPreviewWidth: p.width ?? formData.hoverPreviewWidth, hoverPreviewHeight: p.height ?? formData.hoverPreviewHeight })}
                     />
                     </AccordionPanel>
                 </AccordionItem>
 
-                <AccordionItem value="files">
+                <AccordionItem value="wm">
                     <AccordionHeader>
-                        <Folder24Regular />&nbsp;{t("settings.files")}
+                        {t("settings.watermark")}
                     </AccordionHeader>
                     <AccordionPanel>
-                    <FileSettingsPanel
+                        <WatermarkSettingsPanel wm={wm} fonts={fonts} onChange={updateWatermark} />
+                    </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="preferences">
+                    <AccordionHeader>
+                        {t("settings.preferences")}
+                    </AccordionHeader>
+                    <AccordionPanel>
+                    <PreferenceSettingsPanel
                         defaultStoragePath={formData.defaultStoragePath}
-                        onChange={(p) => {
-                            // If changed from current, ask to migrate immediately
-                            const current = settings.defaultStoragePath;
-                            if (p && p !== current) {
-                                setPendingStoragePath(p);
-                                setConfirmOpen(true);
-                            } else {
-                                setFormData({ ...formData, defaultStoragePath: p });
+                        autoWatermarkImages={formData.autoWatermarkImages}
+                        onChange={(patch) => {
+                            if (patch.defaultStoragePath !== undefined) {
+                                const p = patch.defaultStoragePath;
+                                const current = settings.defaultStoragePath;
+                                if (p && p !== current) {
+                                    setPendingStoragePath(p);
+                                    setConfirmOpen(true);
+                                } else {
+                                    setFormData({ ...formData, defaultStoragePath: p });
+                                }
+                            }
+                            if (patch.autoWatermarkImages !== undefined) {
+                                setFormData({ ...formData, autoWatermarkImages: patch.autoWatermarkImages });
                             }
                         }}
                     />
                     </AccordionPanel>
                 </AccordionItem>
-
-                <AccordionItem value="preview">
-                    <AccordionHeader>
-                        <Settings24Regular />&nbsp;{t("settings.preview")}
-                    </AccordionHeader>
-                    <AccordionPanel>
-                    <PreviewSettingsPanel
-                        width={formData.hoverPreviewWidth}
-                        height={formData.hoverPreviewHeight}
-                        onChange={(p) => setFormData({ ...formData, hoverPreviewWidth: p.width ?? formData.hoverPreviewWidth, hoverPreviewHeight: p.height ?? formData.hoverPreviewHeight })}
-                    />
-                    </AccordionPanel>
-                </AccordionItem>
                 <AccordionItem value="language">
                     <AccordionHeader>
-                        <Settings24Regular />&nbsp;{t("settings.language")}
+                        <LocalLanguage24Regular />&nbsp;{t("settings.language")}
                     </AccordionHeader>
                     <AccordionPanel>
                         <LanguageSettingsPanel
@@ -380,23 +385,7 @@ export function SettingsPage() {
             </Accordion>
             
 
-            {/* 操作按钮 */}
-            <div className={styles.actionButtons}>
-                <Button 
-                    appearance="secondary" 
-                    onClick={handleReset}
-                    disabled={!hasChanges || saving}
-                >
-                    {t("settings.resetBtn")}
-                </Button>
-                <Button 
-                    appearance="primary" 
-                    onClick={handleSave}
-                    disabled={!hasChanges || saving}
-                >
-                    {saving ? t("settings.saving") : t("settings.saveBtn")}
-                </Button>
-            </div>
+            
         </div>
     );
 }

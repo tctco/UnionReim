@@ -27,8 +27,8 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
         const localRef = useRef<Quill | null>(null);
         const [fontKeys, setFontKeys] = useState<string[] | null>(null);
         const [sizeKeys, setSizeKeys] = useState<string[] | null>(null);
-        // Map css px value -> our registered size token (e.g. '14px' -> 'n-14px', '35px' -> 'cn-2')
-        const sizePxToTokenRef = useRef<Record<string, string>>({});
+        // Map css pt value -> our registered size token (e.g. '14pt' -> 'n-14pt', '35pt' -> 'cn-2')
+        const sizeptToTokenRef = useRef<Record<string, string>>({});
         const styleTagRef = useRef<HTMLStyleElement | null>(null);
         const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,7 +109,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
 
         // Build size options with class-based tokens so CN and numeric sizes coexist
         useEffect(() => {
-            const { tokens, pxToToken, css } = getSizeTokensAndCss({ includePickerLabels: true });
+            const { tokens, ptToToken, css } = getSizeTokensAndCss({ includePickerLabels: true });
 
             // Register class attributor so tokens are emitted as classes and resolved by CSS
             try {
@@ -129,7 +129,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             }
 
             setSizeKeys(tokens);
-            sizePxToTokenRef.current = pxToToken;
+            sizeptToTokenRef.current = ptToToken;
 
             // Inject CSS: size token mapping + picker UX helpers
             const tag = document.createElement("style");
@@ -182,8 +182,9 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             // Preserve span classes on paste: map ql-size-* and ql-font-* to formats.
             try {
                 const fontKeySet = new Set(fontKeys || []);
-                const pxToToken = sizePxToTokenRef.current || {};
-                quill.clipboard.addMatcher("SPAN", (node: any, delta: any) => {
+                const ptToToken = sizeptToTokenRef.current || {};
+                quill.clipboard.addMatcher('SPAN', (node: any, delta: any) => {
+                    console.log(node, delta);
                     try {
                         const el = node as HTMLElement;
                         let sizeToken: string | null = null;
@@ -200,9 +201,9 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                             const m = /font-size\s*:\s*([^;]+);?/i.exec(style);
                             if (m) {
                                 const raw = m[1].trim();
-                                // Normalize to px (Quill usually gives px), then map to token
-                                const px = raw.endsWith("px") ? raw : raw;
-                                if (pxToToken[px]) sizeToken = pxToToken[px];
+                                // Normalize to pt (Quill usually gives pt), then map to token
+                                const pt = raw.endsWith("pt") ? raw : raw;
+                                if (ptToToken[pt]) sizeToken = ptToToken[pt];
                             }
                         }
                         // Apply found formats to all ops in this span
@@ -216,10 +217,10 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                                 return op;
                             });
                         }
-                    } catch {}
+                    } catch (e) {console.error(e);}
                     return delta;
                 });
-            } catch {}
+            } catch (e) {console.error(e);}
 
             // Initialize content
             if (initialHtmlRef.current) {
@@ -230,11 +231,11 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                 }
             }
 
-            // Ensure toolbar default shows 14px label (numeric) regardless of first option order
+            // Ensure toolbar default shows 14pt label (numeric) regardless of first option order
             try {
                 const defaultSizeToken = `n-${QUILL_DEFAULT_FONT_SIZE_PT.replace(".", "_")}`;
                 // Set a collapsed selection to apply active format for upcoming input and reflect in toolbar
-                quill.setSelection(1, 1, Quill.sources.SILENT);
+                quill.setSelection(0, 0, Quill.sources.SILENT);
                 quill.format("size", defaultSizeToken, Quill.sources.SILENT);
             } catch {console.error("Failed to set default size token");}
 
@@ -267,7 +268,6 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     // Prefer right and below
                     let left = caretLeft + gapX;
                     let top = caretBottom + panelH / 3 + 6;
-                    console.log({ panelH, panelW, caretLeft, caretTop, caretBottom });
 
                     if (wrapper) {
                         const ww = wrapper.clientWidth;
@@ -425,17 +425,16 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             (quill as any).__applyAutocomplete = applyAutocomplete;
 
             return () => {
-                console.log("set null");
                 localRef.current = null;
                 // @ts-expect-error – clean up
                 if (ref && typeof ref === "object") ref.current = null;
                 container.innerHTML = "";
                 try {
                     (quill.root as HTMLElement).removeEventListener("keydown", onKeyDown);
-                } catch {}
+                } catch (e) {console.error(e);}
                 try {
                     document.removeEventListener("mousedown", onDocMouseDown);
-                } catch {}
+                } catch (e) {console.error(e);}
             };
         }, [fontKeys, sizeKeys]);
 

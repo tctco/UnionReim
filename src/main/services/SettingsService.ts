@@ -21,6 +21,7 @@ export class SettingsService {
             language: 'zh-CN',
             hoverPreviewWidth: 400,
             hoverPreviewHeight: 400,
+            autoWatermarkImages: false,
             // Default to a single resolved path constant in main
             defaultStoragePath: DEFAULT_STORAGE_PATH,
             signatureImageHeightCm: DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM,
@@ -138,6 +139,7 @@ export class SettingsService {
             language: allSettings.language || 'zh-CN',
             hoverPreviewWidth: allSettings.hoverPreviewWidth ? Number(allSettings.hoverPreviewWidth) : 400,
             hoverPreviewHeight: allSettings.hoverPreviewHeight ? Number(allSettings.hoverPreviewHeight) : 400,
+            autoWatermarkImages: allSettings.autoWatermarkImages ? String(allSettings.autoWatermarkImages) === 'true' || String(allSettings.autoWatermarkImages) === '1' : false,
             watermark: watermark,
         };
     }

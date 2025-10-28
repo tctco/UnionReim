@@ -13,7 +13,7 @@ import type {
 } from "@common/types";
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { respond } from "./ipcUtils";
-import { ALLOWED_ATTACHMENT_EXTS } from "@common/constants";
+import { ALLOWED_ATTACHMENT_EXTS, WATERMARK_IMAGE_EXTS } from "@common/constants";
 import { getFonts } from "font-list";
 import { AttachmentService } from "../services/AttachmentService";
 import { ExportImportService } from "../services/ExportImportService";
@@ -236,6 +236,16 @@ export function registerIpcHandlers(): void {
             const attachment = attachmentService.uploadAttachment(project_item_id, filePath, fileName);
             attachments.push(attachment);
         }
+        // Auto watermark images if enabled
+        const appSettings = settingsService.getAppSettings();
+        if (appSettings.autoWatermarkImages) {
+            for (const a of attachments) {
+                const ft = (a.file_type || "").toLowerCase();
+                if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
+                    try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
+                }
+            }
+        }
         return attachments;
     }));
 
@@ -285,7 +295,7 @@ export function registerIpcHandlers(): void {
 
     ipcMain.handle(
         "attachment:uploadFromPaths",
-        respond((project_item_id: number, files: Array<{ path: string; original_name?: string }>) => {
+        respond(async (project_item_id: number, files: Array<{ path: string; original_name?: string }>) => {
             const attachments: Attachment[] = [];
             for (const f of files || []) {
                 const filePath = f.path;
@@ -294,18 +304,36 @@ export function registerIpcHandlers(): void {
                 const a = attachmentService.uploadAttachment(project_item_id, filePath, originalName);
                 attachments.push(a);
             }
+            const appSettings = settingsService.getAppSettings();
+            if (appSettings.autoWatermarkImages) {
+                for (const a of attachments) {
+                    const ft = (a.file_type || "").toLowerCase();
+                    if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
+                        try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
+                    }
+                }
+            }
             return attachments;
         }),
     );
 
     ipcMain.handle(
         "attachment:uploadFromData",
-        respond((project_item_id: number, files: Array<{ data: Uint8Array | number[]; name?: string; mime?: string }>) => {
+        respond(async (project_item_id: number, files: Array<{ data: Uint8Array | number[]; name?: string; mime?: string }>) => {
             const attachments: Attachment[] = [];
             for (const f of files || []) {
                 const bytes = Array.isArray(f.data) ? Buffer.from(f.data) : Buffer.from(f.data as Uint8Array);
                 const a = attachmentService.uploadAttachmentFromBuffer(project_item_id, bytes, f.name, f.mime);
                 attachments.push(a);
+            }
+            const appSettings = settingsService.getAppSettings();
+            if (appSettings.autoWatermarkImages) {
+                for (const a of attachments) {
+                    const ft = (a.file_type || "").toLowerCase();
+                    if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
+                        try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
+                    }
+                }
             }
             return attachments;
         }),

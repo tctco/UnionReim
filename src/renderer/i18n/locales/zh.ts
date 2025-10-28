@@ -89,6 +89,7 @@ export default {
     userSettings: "用户设置",
     appearance: "外观",
     files: "文件",
+    preferences: "软件首选项",
     preview: "预览",
     language: "语言",
     migrateTitle: "迁移文件",
@@ -100,9 +101,15 @@ export default {
     resetBtn: "重置",
     watermarkPreview: "水印预览",
   },
+  preferences: {
+    storageRootLabel: "默认存储路径",
+    autoWatermarkLabel: "上传图片时自动加水印",
+    autoWatermarkHelp: "开启后，上传图片文件（{exts}）将自动按当前水印设置加水印，无需手动操作。",
+  },
   previewSettings: {
     widthLabel: "预览宽度（px）",
     heightLabel: "预览高度（px）",
+    sizeHelp: "设置鼠标悬停预览的最大尺寸。图片会按比例缩放以适配；PDF 使用最大边界。实际大小还受屏幕可视区域影响。",
   },
   appearance: {
     followSystem: "跟随系统",

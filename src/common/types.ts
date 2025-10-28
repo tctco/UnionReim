@@ -111,6 +111,7 @@ export interface AppSettings {
     language?: string;
     hoverPreviewWidth?: number;
     hoverPreviewHeight?: number;
+    autoWatermarkImages?: boolean;
     watermark?: WatermarkSettings;
     signatureImageHeightCm?: number; // height for signature image when embedding into PDFs (cm)
 }
