@@ -13,7 +13,7 @@ import {
     tokens,
 } from "@fluentui/react-components";
 import { Add24Regular, Delete24Regular, Save24Regular } from "@fluentui/react-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { useTemplate, useTemplates } from "../hooks/useTemplates";
@@ -22,6 +22,8 @@ import type { TemplateItem } from "@common/types";
 import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 import { useI18n } from "../i18n";
 import TokenAutocompleteInput from "../components/Common/TokenAutocompleteInput";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 const useStyles = makeStyles({
     container: {
@@ -40,9 +42,9 @@ const useStyles = makeStyles({
         padding: "16px",
         backgroundColor: tokens.colorNeutralBackground2,
         borderRadius: tokens.borderRadiusMedium,
-    },
-    formField: {
-        marginBottom: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
     },
     itemList: {
         display: "flex",
@@ -50,7 +52,7 @@ const useStyles = makeStyles({
         gap: "12px",
     },
     itemCard: {
-        padding: "16px",
+        padding: "4px",
         backgroundColor: tokens.colorNeutralBackground1,
         borderRadius: tokens.borderRadiusMedium,
         border: `1px solid ${tokens.colorNeutralStroke1}`,
@@ -59,12 +61,25 @@ const useStyles = makeStyles({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "12px",
+        marginBottom: "4px",
+        marginLeft: "0px",
+        marginRight: "12px",
+    },
+    dragHandle: {
+        width: "18px",
+        height: "18px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: "4px",
+        cursor: "grab",
+        color: tokens.colorNeutralForeground3,
+        userSelect: "none",
     },
     itemFields: {
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-        gap: "16px",
+        gap: "8px",
         "@media (max-width: 600px)": {
             gridTemplateColumns: "1fr",
             gap: "12px",
@@ -109,7 +124,11 @@ export function TemplateEditorPage() {
             setName(template.name);
             setDescription(template.description || "");
             setCreator(template.creator || "");
-            setItems(template.items);
+            // Ensure items are sorted by display_order then id for stable UI
+            const sorted = [...template.items].sort((a, b) =>
+                a.display_order === b.display_order ? (a.item_id - b.item_id) : (a.display_order - b.display_order)
+            );
+            setItems(sorted);
         }
     }, [template]);
 
@@ -177,6 +196,28 @@ export function TemplateEditorPage() {
         }
     };
 
+    // Reorder handlers (drag-and-drop)
+    const moveItem = (dragIndex: number, hoverIndex: number) => {
+        setItems((prev) => {
+            const next = [...prev];
+            const [removed] = next.splice(dragIndex, 1);
+            next.splice(hoverIndex, 0, removed);
+            return next;
+        });
+    };
+
+    const persistOrder = async () => {
+        // Persist current order by setting display_order to index
+        const updates = items.map((it, index) => ({ id: it.item_id!, order: index }));
+        try {
+            for (const u of updates) {
+                await updateItem({ item_id: u.id, display_order: u.order });
+            }
+        } catch (err) {
+            console.error("Failed to persist item order:", err);
+        }
+    };
+
     const handleDeleteItemClick = (item: TemplateItem) => {
         setDeleteConfirmItem(item);
     };
@@ -214,21 +255,21 @@ export function TemplateEditorPage() {
             </div>
 
             <div className={styles.section}>
-                <Field label={t("templates.fieldName")} required>
+                <Field orientation="horizontal" label={t("templates.fieldName")} required>
                     <Input
                         value={name}
                         onChange={(_, data) => setName(data.value)}
                         placeholder={t("templates.fieldNamePlaceholder")}
                     />
                 </Field>
-                <Field label={t("templates.fieldDesc")}>
+                <Field orientation="horizontal" label={t("templates.fieldDesc")}>
                     <Textarea
                         value={description}
                         onChange={(_, data) => setDescription(data.value)}
                         placeholder={t("templates.fieldDescPlaceholder")}
                     />
                 </Field>
-                <Field label={t("templates.fieldCreator")}>
+                <Field orientation="horizontal" label={t("templates.fieldCreator")}>
                     <Input
                         value={creator}
                         onChange={(_, data) => setCreator(data.value)}
@@ -246,11 +287,28 @@ export function TemplateEditorPage() {
                         </Button>
                     </div>
 
+                    <DndProvider backend={HTML5Backend}>
                     <div className={styles.itemList}>
-                        {items.map((item) => (
-                            <div key={item.item_id} className={styles.itemCard}>
-                                <div className={styles.itemHeader}>
-                                    <Input
+                        {items.map((item, index) => (
+                            <DraggableItemCard
+                                key={item.item_id}
+                                index={index}
+                                moveItem={moveItem}
+                                persistOrder={persistOrder}
+                            >
+                                {({ dragHandleRef }) => (
+                                    <div className={styles.itemCard}>
+                                        <div className={styles.itemHeader}>
+                                            <div
+                                                className={styles.dragHandle}
+                                                ref={dragHandleRef as any}
+                                                title={t("templates.dragToReorder") || "Drag to reorder"}
+                                                aria-label={t("templates.dragToReorder") || "Drag to reorder"}
+                                            >
+                                                ⋮⋮
+                                            </div>
+                                            <Input
+                                        appearance="underline"
                                         value={item.name || ""}
                                         onChange={(_, data) => {
                                             // Update local state immediately
@@ -266,13 +324,7 @@ export function TemplateEditorPage() {
                                         placeholder={t("templates.itemNamePlaceholder")}
                                         style={{ flex: 1, marginRight: "12px" }}
                                     />
-                                    <Button
-                                        icon={<Delete24Regular />}
-                                        onClick={() => handleDeleteItemClick(item as TemplateItem)}
-                                        appearance="subtle"
-                                    />
-                                </div>
-                                <div className={styles.itemFields}>
+
                                     <Checkbox
                                         label={t("templates.required")}
                                         checked={item.is_required || false}
@@ -288,15 +340,22 @@ export function TemplateEditorPage() {
                                         checked={item.allows_multiple_files || false}
                                         onChange={(_, data) => handleUpdateItem(item.item_id!, "allows_multiple_files", data.checked)}
                                     />
-                                </div>
-                                {item.needs_watermark && (
-                                    <Field
+                                    <Button
+                                        size="small"
+                                        icon={<Delete24Regular />}
+                                        onClick={() => handleDeleteItemClick(item as TemplateItem)}
+                                        appearance="subtle"
+                                    />
+                                        </div>
+                                        {item.needs_watermark && (
+                                            <Field
+                                        orientation="horizontal"
                                         label={
                                             <InfoLabel info={t("templates.placeholdersInfo", { list: formatWatermarkPlaceholderList() })}>
                                                 {t("templates.wmTemplate")}
                                             </InfoLabel>
                                         }
-                                        style={{ marginTop: "12px" }}
+                                        style={{ marginTop: "8px", marginLeft: "12px" }}
                                     >
                                         <TokenAutocompleteInput
                                             value={item.watermark_template || ""}
@@ -313,11 +372,14 @@ export function TemplateEditorPage() {
                                             placeholder={t("templates.wmTemplatePlaceholder")}
                                             style={{ width: "100%" }}
                                         />
-                                    </Field>
+                                            </Field>
+                                        )}
+                                    </div>
                                 )}
-                            </div>
+                            </DraggableItemCard>
                         ))}
                     </div>
+                    </DndProvider>
                 </div>
             )}
 
@@ -333,6 +395,57 @@ export function TemplateEditorPage() {
                 onOpenChange={(open) => !open && setDeleteConfirmItem(null)}
                 destructive
             />
+        </div>
+    );
+}
+
+// Draggable wrapper for item cards with a dedicated drag handle
+const ITEM_TYPE = "TEMPLATE_ITEM";
+
+function DraggableItemCard({ index, moveItem, persistOrder, children }: {
+    index: number;
+    moveItem: (dragIndex: number, hoverIndex: number) => void;
+    persistOrder: () => void;
+    children: (opts: { dragHandleRef: (node: HTMLElement | null) => void }) => React.ReactNode;
+}) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    const [, drop] = useDrop({
+        accept: ITEM_TYPE,
+        hover(item: { index: number }, monitor) {
+            if (!containerRef.current) return;
+            const dragIndex = item.index;
+            const hoverIndex = index;
+            if (dragIndex === hoverIndex) return;
+
+            const hoverBoundingRect = containerRef.current.getBoundingClientRect();
+            const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+            const clientOffset = monitor.getClientOffset();
+            if (!clientOffset) return;
+            const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+            if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+            if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+            moveItem(dragIndex, hoverIndex);
+            item.index = hoverIndex;
+        },
+    });
+
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: ITEM_TYPE,
+        item: { index },
+        end: () => {
+            persistOrder();
+        },
+        collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    }), [index]);
+
+    drop(containerRef);
+
+    return (
+        <div ref={containerRef} style={{ opacity: isDragging ? 0.6 : 1 }}>
+            {children({ dragHandleRef: drag as unknown as (node: HTMLElement | null) => void })}
         </div>
     );
 }

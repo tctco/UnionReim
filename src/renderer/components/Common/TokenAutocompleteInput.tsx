@@ -231,8 +231,10 @@ export default function TokenAutocompleteInput(props: TokenAutocompleteInputProp
   return (
     <div ref={wrapperRef} style={{ position: "relative", width: "100%", ...style }}>
       <Input
+        size="small"
+        appearance="underline"
         {...rest}
-        ref={inputRef as any}
+        ref={inputRef as React.RefObject<HTMLInputElement>}
         value={value}
         disabled={disabled}
         placeholder={placeholder}
