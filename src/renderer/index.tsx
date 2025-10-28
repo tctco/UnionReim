@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider, createHashRouter, Navigate } from "react-router-dom";
 import { App } from "./App";
 import { I18nProvider } from "./i18n";
+import { HomePage } from "./pages/HomePage";
 import { TemplateListPage } from "./pages/TemplateListPage";
 import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 import { TemplateViewPage } from "./pages/TemplateViewPage";
@@ -19,7 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
             path: "/",
             element: <App />,
             children: [
-                { index: true, element: <Navigate to="/projects" replace /> },
+                { index: true, element: <Navigate to="/home" replace /> },
+                { path: "/home", element: <HomePage /> },
                 { path: "/templates", element: <TemplateListPage /> },
                 { path: "/templates/new", element: <TemplateEditorPage /> },
                 { path: "/templates/:id", element: <TemplateViewPage /> },
@@ -33,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 { path: "/projects/:id/print", element: <PrintPreviewPage /> },
                 { path: "/projects/:id/edit", element: <ProjectEditorPage /> },
                 { path: "/settings", element: <SettingsPage /> },
-                { path: "*", element: <Navigate to="/templates" replace /> },
+                { path: "*", element: <Navigate to="/home" replace /> },
             ],
         },
     ]);

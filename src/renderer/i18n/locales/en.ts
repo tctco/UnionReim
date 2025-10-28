@@ -53,6 +53,7 @@ export default {
     apply: "Apply",
   },
   nav: {
+    home: "Home",
     templates: "Templates",
     projects: "Projects",
     documents: "Documents",
@@ -192,6 +193,7 @@ export default {
     noFiles: "No files uploaded",
   },
   breadcrumbs: {
+    home: "Home",
     templates: "Templates",
     newTemplate: "New Template",
     viewTemplate: "View Template",
@@ -203,10 +205,11 @@ export default {
     documents: "Documents",
     newDocument: "New Document",
     editDocument: "Edit Document",
+    settings: "Settings",
   }
   ,
   app: {
-    title: "Reimbursement",
+    title: "UnionReim",
   },
   sidebar: {
     tagline: "Manage your reimbursement materials",
@@ -225,5 +228,33 @@ export default {
       watermarked: "Watermarked",
       original: "Original",
     }
+  },
+  home: {
+    welcome: "Welcome to UnionReim",
+    tagline: "Your professional reimbursement material management assistant, making reimbursement simple and efficient",
+    cards: {
+      projects: {
+        title: "Reimbursement Projects",
+        description: "Manage your reimbursement projects, organize and track all reimbursement materials",
+      },
+      templates: {
+        title: "Reimbursement Templates",
+        description: "Create and manage reimbursement templates, quickly start new reimbursement projects",
+      },
+      documents: {
+        title: "Document Templates",
+        description: "Manage declaration and certification document templates, quickly generate required materials",
+      },
+      settings: {
+        title: "Application Settings",
+        description: "Customize application appearance, watermark, user information and other preference settings",
+      },
+      goTo: "Go to",
+    },
+    stats: {
+      projects: "Projects",
+      templates: "Templates",
+      documents: "Documents",
+    },
   }
 } as const;

@@ -31,6 +31,12 @@ export function AppBreadcrumb() {
         const pathSegments: BreadcrumbSegment[] = [];
         const path = location.pathname;
 
+        // Don't show breadcrumbs for home page
+        if (path === '/' || path === '/home') {
+            setSegments([]);
+            return;
+        }
+
         // Parse the current path and generate breadcrumb segments
         if (path.startsWith('/templates')) {
             pathSegments.push({ label: t('breadcrumbs.templates'), path: '/templates' });
@@ -73,10 +79,12 @@ export function AppBreadcrumb() {
             } else if (path.match(/\/documents\/\d+$/)) {
                 pathSegments.push({ label: t('breadcrumbs.editDocument'), path: path });
             }
+        } else if (path.startsWith('/settings')) {
+            pathSegments.push({ label: t('breadcrumbs.settings'), path: '/settings' });
         }
 
         setSegments(pathSegments);
-    }, [location.pathname]);
+    }, [location.pathname, t]);
 
     if (segments.length === 0) {
         return null;

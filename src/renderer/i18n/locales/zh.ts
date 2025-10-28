@@ -53,6 +53,7 @@ export default {
     apply: "应用",
   },
   nav: {
+    home: "首页",
     templates: "模板",
     projects: "项目",
     documents: "文档",
@@ -192,6 +193,7 @@ export default {
     noFiles: "尚未上传文件",
   },
   breadcrumbs: {
+    home: "首页",
     templates: "模板",
     newTemplate: "新建模板",
     viewTemplate: "查看模板",
@@ -203,10 +205,11 @@ export default {
     documents: "文档",
     newDocument: "新建文档",
     editDocument: "编辑文档",
+    settings: "设置",
   }
   ,
   app: {
-    title: "票据夹",
+    title: "票据匣",
   },
   sidebar: {
     tagline: "管理您的报销材料",
@@ -225,5 +228,33 @@ export default {
       watermarked: "已加水印",
       original: "原始",
     }
+  },
+  home: {
+    welcome: "欢迎使用票据匣",
+    tagline: "您的专业报销材料管理助手，让报销变得简单而高效",
+    cards: {
+      projects: {
+        title: "报销项目",
+        description: "管理您的报销项目，组织和跟踪所有报销材料",
+      },
+      templates: {
+        title: "报销模板",
+        description: "创建和管理报销模板，快速启动新的报销项目",
+      },
+      documents: {
+        title: "文档模板",
+        description: "管理声明和证明类文档模板，快速生成所需材料",
+      },
+      settings: {
+        title: "应用设置",
+        description: "自定义应用外观、水印、用户信息等偏好设置",
+      },
+      goTo: "前往",
+    },
+    stats: {
+      projects: "个项目",
+      templates: "个模板",
+      documents: "个文档",
+    },
   }
 } as const;
