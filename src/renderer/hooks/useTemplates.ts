@@ -106,7 +106,11 @@ export function useTemplate(template_id: number | null) {
 
     const deleteItem = useCallback(async (item_id: number) => {
         reset();
-        await callIpc(() => window.ContextBridge.templateItem.delete(item_id), "Failed to delete item");
+        const result = await callIpc(() => window.ContextBridge.templateItem.safeDelete(item_id), "Failed to delete item");
+        if (!result || (typeof result === 'object' && 'success' in (result as any) && !(result as any).success)) {
+            const reason = (result as any)?.error || "Failed to delete item";
+            throw new Error(reason);
+        }
         setTemplate((prev) => {
             if (!prev) return prev;
             return { ...prev, items: prev.items.filter((i) => i.item_id !== item_id) };

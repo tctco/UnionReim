@@ -74,7 +74,7 @@ export default {
     deletedTitle: "Deleted",
     deletedMessage: "Item deleted successfully",
     deleteFailedTitle: "Delete failed",
-    deleteFailedMessage: "Unable to delete item",
+    deleteFailedMessage: "Unable to delete item. It may be in use by other processes or it may be associated with other items/projects.",
     updatedTitle: "Updated",
     updatedMessage: "Changes updated successfully",
     updateFailedTitle: "Update failed",

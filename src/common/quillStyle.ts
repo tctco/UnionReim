@@ -87,6 +87,13 @@ export function buildRuntimeCssForHtmlRender(fontNames?: string[], opts?: { noFo
   base.push(
     `body{font-family:${JSON.stringify(QUILL_DEFAULT_FONT_FAMILY)};font-size:${QUILL_DEFAULT_FONT_SIZE_PT};padding:16px;}`,
   );
+  // Ensure paragraphs render with visible spacing and that empty paragraphs produce a visible line
+  base.push(
+    `p{margin:1em 0;}`,
+  );
+  base.push(
+    `p:empty::before{content:"\\00a0";}`,
+  );
   base.push(`.ql-align-center{text-align:center}`);
   base.push(`.ql-align-right{text-align:right}`);
   base.push(`.ql-align-justify{text-align:justify}`);

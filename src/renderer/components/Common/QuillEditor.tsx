@@ -61,7 +61,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
         useEffect(() => {
             initialHtmlRef.current = initialHtml;
         }, [initialHtml]);
-
+        
         // Load local fonts and register a dynamic font whitelist
         useEffect(() => {
             let mounted = true;
@@ -183,7 +183,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             try {
                 const fontKeySet = new Set(fontKeys || []);
                 const ptToToken = sizeptToTokenRef.current || {};
-                quill.clipboard.addMatcher('SPAN', (node: any, delta: any) => {
+                quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node: any, delta: any) => {
                     console.log(node, delta);
                     try {
                         const el = node as HTMLElement;

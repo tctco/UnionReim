@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { useTemplate, useTemplates } from "../hooks/useTemplates";
-import { useSaveHandler } from "../utils/toastHelpers";
+import { useDeleteHandler, useSaveHandler } from "../utils/toastHelpers";
 import type { TemplateItem } from "@common/types";
 import { formatWatermarkPlaceholderList } from "@common/watermarkPlaceholders";
 import { useI18n } from "../i18n";
@@ -100,6 +100,9 @@ export function TemplateEditorPage() {
     const [items, setItems] = useState<Partial<TemplateItem>[]>([]);
     const [deleteConfirmItem, setDeleteConfirmItem] = useState<TemplateItem | null>(null);
     
+    // 删除操作的 toast 处理器：仅显示错误，自定义标题
+    const deleteWithToast = useDeleteHandler({ successTitle: undefined, successMessage: undefined, errorTitle: "删除失败" });
+
 
     useEffect(() => {
         if (template) {
@@ -180,14 +183,11 @@ export function TemplateEditorPage() {
 
     const handleDeleteItemConfirm = async () => {
         if (!deleteConfirmItem) return;
-        
-        try {
+        await deleteWithToast(async () => {
             await deleteItem(deleteConfirmItem.item_id);
-        } catch (err) {
-            console.error("Failed to delete item:", err);
-        } finally {
-            setDeleteConfirmItem(null);
-        }
+            return true as unknown as never; // 返回任意值以满足泛型
+        });
+        setDeleteConfirmItem(null);
     };
 
     if (loading) {

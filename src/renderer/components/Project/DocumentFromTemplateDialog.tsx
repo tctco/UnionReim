@@ -48,6 +48,7 @@ export default function DocumentFromTemplateDialog(props: {
     const [selectedId, setSelectedId] = useState<string>("");
     const [values, setValues] = useState<Record<string, string>>({});
     const [baseHtml, setBaseHtml] = useState<string>("");
+    const [editedHtml, setEditedHtml] = useState<string>("");
 
     const selected = useMemo(
         () => templates.find((t) => String(t.document_id) === selectedId) || null,
@@ -92,13 +93,14 @@ export default function DocumentFromTemplateDialog(props: {
         setSelectedId(id);
         const t = templates.find((x) => String(x.document_id) === id);
         setBaseHtml(t?.content_html || "");
+        setEditedHtml("");
     };
 
     const uploadPdf = async () => {
         if (!selected) return;
         setLoading(true);
         try {
-            const html = previewHtml;
+            const html = editedHtml || previewHtml;
             // create project document and export to PDF in storage
             const created = await window.ContextBridge.projectDocument.create({
                 project_id: projectId,
@@ -146,13 +148,16 @@ export default function DocumentFromTemplateDialog(props: {
                                     </Select>
                                 </Field>
                             </div>
-                            <div className={styles.preview}>
-                                <QuillEditor
-                                    key={(selectedId || "").length + (baseHtml || "").length}
-                                    initialHtml={previewHtml}
-                                    minHeight={240}
-                                />
-                            </div>
+                            {selectedId.length > 0 && (
+                                <div className={styles.preview}>
+                                    <QuillEditor
+                                        key={(selectedId || "").length + (baseHtml || "").length}
+                                        initialHtml={previewHtml}
+                                        onHtmlChange={(html) => setEditedHtml(html)}
+                                        minHeight={240}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </DialogContent>
                     <DialogActions>

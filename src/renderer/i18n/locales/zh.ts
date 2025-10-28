@@ -74,7 +74,7 @@ export default {
     deletedTitle: "已删除",
     deletedMessage: "删除成功",
     deleteFailedTitle: "删除失败",
-    deleteFailedMessage: "无法删除项目",
+    deleteFailedMessage: "无法删除项目，它有可能正被其它进程占用，或与其它项目存在关联。",
     updatedTitle: "已更新",
     updatedMessage: "更改已成功更新",
     updateFailedTitle: "更新失败",
