@@ -198,6 +198,8 @@ export default {
     description: "描述",
     materials: "材料",
     noFiles: "尚未上传文件",
+    requiredFieldsProgress: "必填项完成进度",
+    completed: "已完成",
   },
   breadcrumbs: {
     home: "首页",

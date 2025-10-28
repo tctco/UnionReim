@@ -198,6 +198,8 @@ export default {
     description: "Description",
     materials: "Materials",
     noFiles: "No files uploaded",
+    requiredFieldsProgress: "Required Fields Progress",
+    completed: "completed",
   },
   breadcrumbs: {
     home: "Home",

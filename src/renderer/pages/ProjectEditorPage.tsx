@@ -376,7 +376,9 @@ export function ProjectEditorPage() {
         setDocDialogOpen(true);
     };
 
-    if (loading) {
+    // Only show the full-page spinner on initial load when no project data yet.
+    // During background refreshes (e.g., after uploads), keep the page rendered to avoid scroll jumps.
+    if (loading && !project) {
         return (
             <div className={styles.container}>
                 <div style={{ textAlign: "center", padding: "64px" }}>

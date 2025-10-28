@@ -14,6 +14,8 @@ import {
     TableHeader,
     TableHeaderCell,
     TableRow,
+    Field,
+    ProgressBar,
 } from "@fluentui/react-components";
 import { ArrowUpload24Regular, Edit24Regular, Print24Regular } from "@fluentui/react-icons";
 import { useParams, useNavigate } from "react-router";
@@ -121,7 +123,6 @@ export function ProjectPreviewPage() {
         });
         return () => {
             mounted = false;
-            // ipcRenderer.on 返回的是 void，此处无需显式移除，主进程广播足够轻量
         };
     }, []);
 
@@ -147,6 +148,20 @@ export function ProjectPreviewPage() {
             </div>
         );
     }
+
+    // Calculate required fields completion
+    const requiredItems = project.items.filter(item => item.template_item.is_required);
+    const completedRequiredItems = requiredItems.filter(item => item.attachments.length > 0);
+    const requiredFieldsProgress = requiredItems.length > 0 
+        ? completedRequiredItems.length / requiredItems.length 
+        : 0;
+    
+    // Determine progress bar color and validation state
+    const progressColor: "success" | "error" = requiredFieldsProgress === 1 ? "success" : "error";
+    const validationState: "success" | "error" = requiredFieldsProgress === 1 ? "success" : "error";
+    const validationMessage = requiredItems.length > 0
+        ? `${t("projects.requiredFieldsProgress")}：${completedRequiredItems.length}/${requiredItems.length} ${t("projects.completed")}`
+        : "";
 
     return (
         <div className={styles.container}>
@@ -195,6 +210,14 @@ export function ProjectPreviewPage() {
                         <div className={styles.metadataItem} style={{ gridColumn: "1 / -1" }}>
                             <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.description")}</Caption1>
                             <Body1>{project.metadata.description}</Body1>
+                        </div>
+                    )}
+                    {/* Required fields progress bar - only show if there are required fields */}
+                    {requiredItems.length > 0 && (
+                        <div className={styles.metadataItem} style={{ gridColumn: "1 / -1" }}>
+                            <Field validationMessage={validationMessage} validationState={validationState}>
+                                <ProgressBar value={requiredFieldsProgress} color={progressColor} />
+                            </Field>
                         </div>
                     )}
                 </div>

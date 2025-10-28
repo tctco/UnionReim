@@ -35,6 +35,25 @@ export function registerIpcHandlers(): void {
     const printService = new PrintService();
     const documentService = new DocumentService();
 
+    // Helper: auto-apply watermark to eligible attachments
+    const tryAutoWatermarkAttachments = async (attachments: Attachment[]) => {
+        const appSettings = settingsService.getAppSettings();
+        if (!appSettings.autoWatermarkImages) return;
+
+        for (const a of attachments) {
+            const ft = (a.file_type || "").toLowerCase();
+            if (!(WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) continue;
+
+            // Check template item's needs_watermark before applying
+            const projectItem = projectService.getProjectItem(a.project_item_id);
+            if (!projectItem) continue;
+            const templateItem = templateService.getTemplateItem(projectItem.template_item_id);
+            if (!templateItem || !templateItem.needs_watermark) continue;
+
+            try { await watermarkService.applyWatermark(a.attachment_id); } catch { /* ignore */ }
+        }
+    };
+
     // Settings handlers
     ipcMain.handle("settings:get", respond(() => settingsService.getAppSettings()));
 
@@ -236,16 +255,8 @@ export function registerIpcHandlers(): void {
             const attachment = attachmentService.uploadAttachment(project_item_id, filePath, fileName);
             attachments.push(attachment);
         }
-        // Auto watermark images if enabled
-        const appSettings = settingsService.getAppSettings();
-        if (appSettings.autoWatermarkImages) {
-            for (const a of attachments) {
-                const ft = (a.file_type || "").toLowerCase();
-                if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
-                    try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
-                }
-            }
-        }
+        // Auto watermark images if enabled and required by template
+        await tryAutoWatermarkAttachments(attachments);
         return attachments;
     }));
 
@@ -304,15 +315,7 @@ export function registerIpcHandlers(): void {
                 const a = attachmentService.uploadAttachment(project_item_id, filePath, originalName);
                 attachments.push(a);
             }
-            const appSettings = settingsService.getAppSettings();
-            if (appSettings.autoWatermarkImages) {
-                for (const a of attachments) {
-                    const ft = (a.file_type || "").toLowerCase();
-                    if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
-                        try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
-                    }
-                }
-            }
+            await tryAutoWatermarkAttachments(attachments);
             return attachments;
         }),
     );
@@ -326,15 +329,7 @@ export function registerIpcHandlers(): void {
                 const a = attachmentService.uploadAttachmentFromBuffer(project_item_id, bytes, f.name, f.mime);
                 attachments.push(a);
             }
-            const appSettings = settingsService.getAppSettings();
-            if (appSettings.autoWatermarkImages) {
-                for (const a of attachments) {
-                    const ft = (a.file_type || "").toLowerCase();
-                    if ((WATERMARK_IMAGE_EXTS as readonly string[]).includes(ft)) {
-                        try { await watermarkService.applyWatermark(a.attachment_id); } catch (e) { void e; }
-                    }
-                }
-            }
+            await tryAutoWatermarkAttachments(attachments);
             return attachments;
         }),
     );
