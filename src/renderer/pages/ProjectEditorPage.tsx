@@ -6,10 +6,9 @@ import {
     Select,
     makeStyles,
     Spinner,
-    Title3,
     tokens,
 } from "@fluentui/react-components";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import RenameDialogSimple from "../components/Common/RenameDialogSimple";
@@ -27,10 +26,11 @@ import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
 import { useToastHandler } from "../utils/toastHelpers";
 import { useI18n } from "../i18n";
+import { ListPageLayout } from "../components/Layout/ListPageLayout";
 
 const useStyles = makeStyles({
     container: {
-        padding: "24px",
+        padding: "12px",
         maxWidth: "1200px",
         margin: "0 auto",
     },
@@ -38,11 +38,11 @@ const useStyles = makeStyles({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "24px",
+        marginBottom: "12px",
     },
     section: {
-        marginBottom: "24px",
-        padding: "16px",
+        marginBottom: "12px",
+        padding: "8px",
         backgroundColor: tokens.colorNeutralBackground2,
         borderRadius: tokens.borderRadiusMedium,
     },
@@ -50,8 +50,8 @@ const useStyles = makeStyles({
         marginBottom: "16px",
     },
     itemCard: {
-        marginBottom: "16px",
-        padding: "16px",
+        marginBottom: "4px",
+        padding: "12px",
         backgroundColor: tokens.colorNeutralBackground1,
         borderRadius: tokens.borderRadiusMedium,
     },
@@ -59,19 +59,17 @@ const useStyles = makeStyles({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "12px",
     },
     attachmentList: {
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
-        marginTop: "12px",
+        gap: "2px",
     },
     attachmentItem: {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "8px 12px",
+        padding: "4px 8px",
         backgroundColor: tokens.colorNeutralBackground3,
         borderRadius: tokens.borderRadiusSmall,
     },
@@ -114,6 +112,7 @@ export function ProjectEditorPage() {
     const [status, setStatus] = useState<'incomplete' | 'complete' | 'exported'>("incomplete");
     const [deleteConfirmAttachment, setDeleteConfirmAttachment] = useState<Attachment | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [searchText, setSearchText] = useState("");
 
     useEffect(() => {
         if (project) {
@@ -373,29 +372,40 @@ export function ProjectEditorPage() {
         setDocDialogOpen(true);
     };
 
+    // Filter items based on search text (must be before any conditional returns)
+    const filteredItems = useMemo(() => {
+        if (!project?.items) return [];
+        if (!searchText.trim()) return project.items;
+        const search = searchText.toLowerCase();
+        return project.items.filter((item) => 
+            item.template_item.name.toLowerCase().includes(search)
+        );
+    }, [project?.items, searchText]);
+
     // Only show the full-page spinner on initial load when no project data yet.
     // During background refreshes (e.g., after uploads), keep the page rendered to avoid scroll jumps.
     if (loading && !project) {
         return (
-            <div className={styles.container}>
+            <ListPageLayout title={t("projects.loading")}>
                 <div style={{ textAlign: "center", padding: "64px" }}>
-                    <Spinner size="large" label="Loading project..." />
+                    <Spinner size="large" label={t("projects.loading")} />
                 </div>
-            </div>
+            </ListPageLayout>
         );
     }
 
     // New project - template selection
     if (isNew && !selectedTemplate) {
         return (
-            <div className={styles.container}>
-                <div className={styles.header}>
-                    <Title3>Create New Project</Title3>
-                    <Button onClick={() => navigate("/projects")}>Cancel</Button>
-                </div>
-                <Body1 style={{ marginBottom: "16px" }}>Select a template to get started:</Body1>
+            <ListPageLayout
+                title={t("projects.newProject")}
+                actions={
+                    <Button onClick={() => navigate("/projects")}>{t("common.cancel")}</Button>
+                }
+            >
+                <Body1 style={{ marginBottom: "16px" }}>{t("projects.selectTemplate") || "Select a template to get started:"}</Body1>
                 <TemplateSelectorGrid templates={templates} onSelect={(t) => setSelectedTemplate(t)} />
-            </div>
+            </ListPageLayout>
         );
     }
 
@@ -420,15 +430,12 @@ export function ProjectEditorPage() {
     // Edit existing project
     if (!project) return null;
 
-
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <div>
-                    <Title3>{project.name}</Title3>
-                    <Caption1>Template: {project.template.name}</Caption1>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
+        <ListPageLayout
+            title={project.name}
+            subtitle={<Caption1>Template: {project.template.name}</Caption1>}
+            actions={
+                <>
                     <Select
                         value={status}
                         onChange={async (e) => {
@@ -468,11 +475,17 @@ export function ProjectEditorPage() {
                     <Button appearance="primary" onClick={() => navigate(`/projects/${project.project_id}`)}>
                         Preview
                     </Button>
-                </div>
-            </div>
-
+                </>
+            }
+            searchBar={{
+                value: searchText,
+                onChange: setSearchText,
+                placeholder: t("projects.searchItemsPlaceholder") || "Filter by item name...",
+                buttonText: t("common.search"),
+            }}
+        >
             <div className={styles.section}>
-                {project.items.map((item) => (
+                {filteredItems.map((item) => (
                     <FileUploader
                         key={item.project_item_id}
                         onUpload={(files) => onUploadFromPaths(item.project_item_id, files)}
@@ -569,6 +582,6 @@ export function ProjectEditorPage() {
                 projectCreator={project?.creator}
                 onUploaded={async () => { if (projectId) await loadProject(projectId); }}
             />
-        </div>
+        </ListPageLayout>
     );
 }

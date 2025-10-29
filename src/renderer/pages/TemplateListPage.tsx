@@ -11,7 +11,6 @@ import {
     Input,
     makeStyles,
     Spinner,
-    Title3,
     tokens,
 } from "@fluentui/react-components";
 import { Add24Regular, ArrowDownload24Regular } from "@fluentui/react-icons";
@@ -19,32 +18,12 @@ import { useState } from "react";
 import type { InputOnChangeData } from "@fluentui/react-components";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
-import { SearchRow } from "../components/Common/SearchRow";
+import { ListPageLayout } from "../components/Layout/ListPageLayout";
 import { TemplateCard } from "../components/Template/TemplateCard";
 import { useTemplates } from "../hooks/useTemplates";
 import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
-    container: {
-        padding: "24px",
-        maxWidth: "1400px",
-        margin: "0 auto",
-    },
-    header: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "24px",
-    },
-    searchBar: {
-        display: "flex",
-        gap: "12px",
-        marginBottom: "24px",
-        alignItems: "center",
-    },
-    searchInput: {
-        maxWidth: "400px",
-    },
     grid: {
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
@@ -54,6 +33,10 @@ const useStyles = makeStyles({
         textAlign: "center",
         padding: "64px 24px",
         color: tokens.colorNeutralForeground3,
+    },
+    centerSpinner: {
+        textAlign: "center",
+        padding: "64px",
     },
 });
 
@@ -143,44 +126,36 @@ export function TemplateListPage() {
 
     if (loading && templates.length === 0) {
         return (
-            <div className={styles.container}>
-                <div style={{ textAlign: "center", padding: "64px" }}>
+            <ListPageLayout title={t("templates.title")}>
+                <div className={styles.centerSpinner}>
                     <Spinner size="large" label={t("templates.loading")} />
                 </div>
-            </div>
+            </ListPageLayout>
         );
     }
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Title3>{t("templates.title")}</Title3>
-                <div style={{ display: "flex", gap: "12px" }}>
+        <ListPageLayout
+            title={t("templates.title")}
+            actions={
+                <>
                     <Button appearance="outline" icon={<ArrowDownload24Regular />} onClick={handleImport}>
                         {t("templates.import")}
                     </Button>
                     <Button appearance="primary" icon={<Add24Regular />} onClick={handleCreate}>
                         {t("templates.newTemplate")}
                     </Button>
-                </div>
-            </div>
-
-            <SearchRow
-                value={searchText}
-                onChange={setSearchText}
-                onSearch={handleSearch}
-                placeholder={t("templates.searchPlaceholder")}
-                buttonText={t("common.search")}
-                className={styles.searchBar}
-                inputClassName={styles.searchInput}
-            />
-
-            {error && (
-                <div style={{ color: tokens.colorPaletteRedForeground1, marginBottom: "16px" }}>
-                    {error}
-                </div>
-            )}
-
+                </>
+            }
+            searchBar={{
+                value: searchText,
+                onChange: setSearchText,
+                onSearch: handleSearch,
+                placeholder: t("templates.searchPlaceholder"),
+                buttonText: t("common.search"),
+            }}
+            error={error}
+        >
             {templates.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Body1>{t("templates.empty")}</Body1>
@@ -243,6 +218,6 @@ export function TemplateListPage() {
                 onOpenChange={(open) => !open && setDeleteDialogTemplate(null)}
                 destructive
             />
-        </div>
+        </ListPageLayout>
     );
 }

@@ -1,4 +1,4 @@
-﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, makeStyles, tokens } from "@fluentui/react-components";
+﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, makeStyles, tokens } from "@fluentui/react-components";
 import { Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Add24Regular } from "@fluentui/react-icons";
@@ -8,13 +8,9 @@ import { useDocumentTemplates } from "../hooks/useDocuments";
 import { useDeleteHandler } from "../utils/toastHelpers";
 import { useI18n } from "../i18n";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
-import { SearchRow } from "../components/Common/SearchRow";
+import { ListPageLayout } from "../components/Layout/ListPageLayout";
 
 const useStyles = makeStyles({
-    container: { padding: "24px", maxWidth: "1400px", margin: "0 auto" },
-    header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" },
-    searchBar: { display: "flex", gap: "12px", marginBottom: "24px", alignItems: "center" },
-    searchInput: { maxWidth: "400px" },
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "16px" },
     card: { cursor: "pointer", ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover } },
     cardContent: { padding: "12px 16px" },
@@ -84,24 +80,21 @@ export function DocumentListPage() {
     const handleDelete = (id: number) => delWithToast(() => deleteDocument(id));
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Title3>{t("documents.title")}</Title3>
-                <div style={{ display: "flex", gap: "8px" }}>
-                    <Button appearance="primary" icon={<Add24Regular />} onClick={() => navigate("/documents/new")}>
-                        {t("nav.newDocument")}
-                    </Button>
-                </div>
-            </div>
-            <SearchRow
-                value={search}
-                onChange={setSearch}
-                onSearch={handleSearch}
-                placeholder={t("documents.searchPlaceholder")}
-                buttonText={t("common.search")}
-                className={styles.searchBar}
-                inputClassName={styles.searchInput}
-            />
+        <ListPageLayout
+            title={t("documents.title")}
+            actions={
+                <Button appearance="primary" icon={<Add24Regular />} onClick={() => navigate("/documents/new")}>
+                    {t("nav.newDocument")}
+                </Button>
+            }
+            searchBar={{
+                value: search,
+                onChange: setSearch,
+                onSearch: handleSearch,
+                placeholder: t("documents.searchPlaceholder"),
+                buttonText: t("common.search"),
+            }}
+        >
             {loading && <Spinner label={t("documents.loading")} />}
             {!loading && (
                 <div className={styles.grid}>
@@ -133,6 +126,6 @@ export function DocumentListPage() {
                 onOpenChange={(open) => !open && setDeleteDialogDoc(null)}
                 destructive
             />
-        </div>
+        </ListPageLayout>
     );
 }

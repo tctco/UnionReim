@@ -1,72 +1,41 @@
 import type { Project } from "@common/types";
-import { Body1, Button, makeStyles, Spinner, Title3, tokens } from "@fluentui/react-components";
+import { Body1, Button, makeStyles, Spinner, tokens } from "@fluentui/react-components";
 import { Add24Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
-import { SearchRow } from "../components/Common/SearchRow";
+import { ListPageLayout } from "../components/Layout/ListPageLayout";
 import ProjectCard from "../components/Project/ProjectCard";
 import { useProjects } from "../hooks/useProjects";
 import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
-    container: {
-        padding: "24px",
-        maxWidth: "1400px",
-        margin: "0 auto",
-    },
-    header: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "24px",
-    },
-    searchBar: {
-        display: "flex",
-        gap: "12px",
-        marginBottom: "24px",
-        alignItems: "center",
-    },
-    searchInput: {
-        maxWidth: "400px",
-    },
     grid: {
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
         gap: "16px",
-    },
-    card: {
-        cursor: "pointer",
-        ":hover": {
-            backgroundColor: tokens.colorNeutralBackground1Hover,
-        },
-    },
-    cardContent: {
-        padding: "12px 16px",
-    },
-    metadata: {
-        marginTop: "8px",
-        display: "flex",
-        gap: "12px",
-        color: tokens.colorNeutralForeground4,
     },
     emptyState: {
         textAlign: "center",
         padding: "64px 24px",
         color: tokens.colorNeutralForeground3,
     },
+    centerSpinner: {
+        textAlign: "center",
+        padding: "64px",
+    },
 });
 
 export function ProjectListPage() {
     const styles = useStyles();
     const navigate = useNavigate();
-    const { projects, loading, error, deleteProject, exportProject, importProject } = useProjects();
+    const { projects, loading, error, loadProjects, deleteProject, exportProject, importProject } = useProjects();
     const { t } = useI18n();
     const [searchText, setSearchText] = useState("");
     const [deleteDialogProject, setDeleteDialogProject] = useState<Project | null>(null);
 
     const handleSearch = () => {
-        // Implement search if needed
+        loadProjects({ search: searchText });
     };
 
     const handleCreate = () => {
@@ -116,44 +85,36 @@ export function ProjectListPage() {
 
     if (loading && projects.length === 0) {
         return (
-            <div className={styles.container}>
-                <div style={{ textAlign: "center", padding: "64px" }}>
+            <ListPageLayout title={t("projects.title")}>
+                <div className={styles.centerSpinner}>
                     <Spinner size="large" label={t("projects.loading")} />
                 </div>
-            </div>
+            </ListPageLayout>
         );
     }
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <Title3>{t("projects.title")}</Title3>
-                <div style={{ display: "flex", gap: "8px" }}>
+        <ListPageLayout
+            title={t("projects.title")}
+            actions={
+                <>
                     <Button onClick={handleImport}>
                         {t("projects.importProject")}
                     </Button>
                     <Button appearance="primary" icon={<Add24Regular />} onClick={handleCreate}>
                         {t("projects.newProject")}
                     </Button>
-                </div>
-            </div>
-
-            <SearchRow
-                value={searchText}
-                onChange={setSearchText}
-                onSearch={handleSearch}
-                placeholder={t("projects.searchPlaceholder")}
-                buttonText={t("common.search")}
-                className={styles.searchBar}
-                inputClassName={styles.searchInput}
-            />
-
-            {error && (
-                <div style={{ color: tokens.colorPaletteRedForeground1, marginBottom: "16px" }}>
-                    {error}
-                </div>
-            )}
-
+                </>
+            }
+            searchBar={{
+                value: searchText,
+                onChange: setSearchText,
+                onSearch: handleSearch,
+                placeholder: t("projects.searchPlaceholder"),
+                buttonText: t("common.search"),
+            }}
+            error={error}
+        >
             {projects.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Body1>{t("projects.empty")}</Body1>
@@ -184,6 +145,6 @@ export function ProjectListPage() {
                 onOpenChange={(open) => !open && setDeleteDialogProject(null)}
                 destructive
             />
-        </div>
+        </ListPageLayout>
     );
 }
