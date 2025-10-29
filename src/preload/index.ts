@@ -97,6 +97,8 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         get: (document_id) => ipcRenderer.invoke('document:get', document_id),
         update: (request) => ipcRenderer.invoke('document:update', request),
         delete: (document_id) => ipcRenderer.invoke('document:delete', document_id),
+        export: (request) => ipcRenderer.invoke('document:export', request),
+        import: (request) => ipcRenderer.invoke('document:import', request),
     },
 
     // Project document operations

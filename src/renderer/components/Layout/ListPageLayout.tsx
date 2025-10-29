@@ -14,6 +14,9 @@ const useStyles = makeStyles({
         alignItems: "center",
         marginBottom: "24px",
     },
+    title: {
+        marginBottom: "6px",
+    },
     searchBar: {
         display: "flex",
         gap: "12px",
@@ -31,7 +34,7 @@ const useStyles = makeStyles({
 
 interface ListPageLayoutProps {
     /** Page title */
-    title: string;
+    title: ReactNode;
     /** Subtitle displayed below the title */
     subtitle?: ReactNode;
     /** Action buttons on the right side of the header */
@@ -66,7 +69,7 @@ export function ListPageLayout({
         <div className={styles.container}>
             <div className={styles.header}>
                 <div>
-                    <Title3>{title}</Title3>
+                    <Title3 className={styles.title}>{title}</Title3>
                     {subtitle}
                 </div>
                 {actions && <div style={{ display: "flex", gap: "8px" }}>{actions}</div>}

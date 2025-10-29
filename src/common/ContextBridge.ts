@@ -131,6 +131,8 @@ export type ContextBridge = {
         get: (document_id: number) => Promise<ApiResponse<DocumentTemplate>>;
         update: (request: import('./types').UpdateDocumentTemplateRequest) => Promise<ApiResponse<DocumentTemplate>>;
         delete: (document_id: number) => Promise<ApiResponse<boolean>>;
+        export: (request: import('./types').DocumentExportRequest) => Promise<ApiResponse<string>>;
+        import: (request: import('./types').DocumentImportRequest) => Promise<ApiResponse<number>>;
     };
 
     // Project document operations

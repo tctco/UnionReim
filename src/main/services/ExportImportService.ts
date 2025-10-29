@@ -1,4 +1,4 @@
-import type { Project, ProjectMetadata, Template, TemplateWithItems, TemplateExportManifest } from "@common/types";
+import type { Project, ProjectMetadata, Template, TemplateWithItems, TemplateExportManifest, DocumentTemplateExportManifest } from "@common/types";
 import AdmZip from "adm-zip";
 import { app } from "electron";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -6,6 +6,7 @@ import { join } from "path";
 import { AttachmentService } from "./AttachmentService";
 import { ProjectService } from "./ProjectService";
 import { TemplateService } from "./TemplateService";
+import { DocumentService } from "./DocumentService";
 
 interface ExportManifest {
     version: string;
@@ -45,11 +46,13 @@ export class ExportImportService {
     private projectService: ProjectService;
     private templateService: TemplateService;
     private attachmentService: AttachmentService;
+    private documentService: DocumentService;
 
     constructor() {
         this.projectService = new ProjectService();
         this.templateService = new TemplateService();
         this.attachmentService = new AttachmentService();
+        this.documentService = new DocumentService();
     }
 
     // Export a project to ZIP
@@ -162,6 +165,73 @@ export class ExportImportService {
         });
 
         return exportPath;
+    }
+
+    // Export a document template to JSON
+    async exportDocument(document_id: number, destination_path?: string): Promise<string> {
+        const doc = this.documentService.getTemplate(document_id);
+        if (!doc) {
+            throw new Error(`Document ${document_id} not found`);
+        }
+
+        const manifest: DocumentTemplateExportManifest = {
+            version: "1.0",
+            export_time: Date.now(),
+            document: {
+                name: doc.name,
+                description: doc.description,
+                creator: doc.creator,
+                content_html: doc.content_html,
+            },
+        };
+
+        // Determine export path
+        let exportPath = destination_path;
+        if (!exportPath) {
+            const safeName = doc.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
+            const exportDir = join(app.getPath("documents"), "reimbursement_exports");
+            if (!existsSync(exportDir)) {
+                mkdirSync(exportDir, { recursive: true });
+            }
+            exportPath = join(exportDir, `document_${safeName}.json`);
+        }
+
+        writeFileSync(exportPath, JSON.stringify(manifest, null, 2), { encoding: "utf8" });
+        return exportPath;
+    }
+
+    // Import a document template from JSON
+    async importDocument(json_path: string): Promise<number> {
+        if (!existsSync(json_path)) {
+            throw new Error("Document file not found");
+        }
+
+        const manifestContent = readFileSync(json_path, "utf8");
+        const manifest: DocumentTemplateExportManifest = JSON.parse(manifestContent);
+
+        if (manifest.version !== "1.0") {
+            throw new Error(`Unsupported document version: ${manifest.version}`);
+        }
+
+        const existing = this.documentService.listTemplates();
+        const same = existing.find((d) => d.name === manifest.document.name);
+        let name = manifest.document.name;
+        if (same) {
+            let counter = 1;
+            while (existing.some((d) => d.name === `${manifest.document.name} (${counter})`)) {
+                counter++;
+            }
+            name = `${manifest.document.name} (${counter})`;
+        }
+
+        const created = this.documentService.createTemplate({
+            name,
+            description: manifest.document.description,
+            creator: manifest.document.creator,
+            content_html: manifest.document.content_html,
+        });
+
+        return created.document_id;
     }
 
     // Import a project from ZIP

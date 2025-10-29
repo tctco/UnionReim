@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "export_time": 1761750726159,
+  "template": {
+    "name": "国内差旅",
+    "description": "武汉协和医院国内差旅报销材料",
+    "creator": "唐诚",
+    "items": [
+      {
+        "name": "差旅费审批表",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 0,
+        "category": null
+      },
+      {
+        "name": "车票（发票）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": "{userName} - {itemName}",
+        "allows_multiple_files": true,
+        "display_order": 1,
+        "category": null
+      },
+      {
+        "name": "车票（支付记录）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": true,
+        "watermark_template": "{userName}-{itemName}",
+        "allows_multiple_files": true,
+        "display_order": 2,
+        "category": null
+      },
+      {
+        "name": "车票（APP订单）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": true,
+        "watermark_template": "{userName}-{itemName}",
+        "allows_multiple_files": true,
+        "display_order": 3,
+        "category": null
+      },
+      {
+        "name": "住宿费（发票）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 4,
+        "category": null
+      },
+      {
+        "name": "住宿费（清单/水单）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": "",
+        "allows_multiple_files": false,
+        "display_order": 5,
+        "category": null
+      },
+      {
+        "name": "住宿费（APP订单）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": true,
+        "watermark_template": "{userName}-{itemName}",
+        "allows_multiple_files": false,
+        "display_order": 6,
+        "category": null
+      },
+      {
+        "name": "住宿费（支付记录）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": true,
+        "watermark_template": "{userName}-{itemName}",
+        "allows_multiple_files": false,
+        "display_order": 7,
+        "category": null
+      },
+      {
+        "name": "会议（通知）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 8,
+        "category": null
+      },
+      {
+        "name": "会议（发票）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 9,
+        "category": null
+      },
+      {
+        "name": "会议（支付记录）",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": true,
+        "watermark_template": "{userName}-{itemName}",
+        "allows_multiple_files": false,
+        "display_order": 10,
+        "category": null
+      },
+      {
+        "name": "公务卡支付记录/未使用公务卡说明",
+        "description": null,
+        "is_required": true,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 11,
+        "category": null
+      },
+      {
+        "name": "其他相关材料",
+        "description": null,
+        "is_required": false,
+        "needs_watermark": false,
+        "watermark_template": null,
+        "allows_multiple_files": false,
+        "display_order": 12,
+        "category": null
+      }
+    ]
+  }
+}

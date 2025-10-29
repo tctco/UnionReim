@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "export_time": 1761750345665,
+  "document": {
+    "name": "协和医院未使用公务卡报销情况说明",
+    "description": null,
+    "creator": "tctco",
+    "content_html": "<p><strong class=\"ql-font-宋体 ql-size-cn-4\">未使用公务卡报销情况说明</strong></p><p></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;&nbsp;&nbsp;</span></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;本人{userName}是华中科技大学附属协和医院在读研究生，学号{studentId}，无公务卡，因参加{projectName}，支出住宿及交通费用共</span><u class=\"ql-font-宋体\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u><span class=\"ql-font-宋体\">元，未使用公务卡消费，请财务予以报销。</span></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;本人承诺所提供的信息真实可靠。</span></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;特此证明！</span></p><p></p><p></p><p></p><p></p><p></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;时间：{date}</span></p><p></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;经费负责人签名：</span></p><p></p><p><span class=\"ql-font-宋体\">&nbsp;&nbsp;本人签名：{signatureImage}</span></p>"
+  }
+}

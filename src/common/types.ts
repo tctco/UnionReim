@@ -213,6 +213,28 @@ export interface MultipleTemplateExportRequest {
     destination_path?: string;
 }
 
+// Document template export/import requests
+export interface DocumentExportRequest {
+    document_id: number;
+    destination_path?: string;
+}
+
+export interface DocumentImportRequest {
+    file_path: string;
+}
+
+// Manifest used when exporting/importing document templates as JSON
+export interface DocumentTemplateExportManifest {
+    version: string; // e.g. "1.0"
+    export_time: number;
+    document: {
+        name: string;
+        description?: string;
+        creator?: string;
+        content_html: string;
+    };
+}
+
 // Manifest used when exporting/importing templates as JSON
 export interface TemplateExportManifest {
     version: string; // e.g. "1.0"

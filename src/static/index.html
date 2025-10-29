@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>createDrawable + anime.js</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+        <style>
+            :root {
+                background: #0b0f16;
+            }
+            body {
+                margin: 0;
+                height: 100vh;
+                display: grid;
+                place-items: center;
+            }
+            svg {
+                width: min(72vmin, 560px);
+                height: auto;
+                overflow: visible;
+            }
+            .s1 {
+                fill: none;
+                stroke: #43c5c7;
+                stroke-width: 4;
+                stroke-linecap: round;
+                stroke-miterlimit: 10;
+            }
+            .s2 {
+                fill: none;
+                stroke: #21a6ff;
+                stroke-width: 4;
+                stroke-linecap: round;
+                stroke-miterlimit: 10;
+            }
+            .glow {
+                filter: drop-shadow(0 0 6px rgba(67, 197, 199, 0.6)) drop-shadow(0 0 12px rgba(33, 166, 255, 0.35));
+            }
+        </style>
+    </head>
+    <body>
+        <svg viewBox="0 0 52.83 31.6" id="stage">
+            <defs>
+                <!-- 你的最终扣合形状 -->
+                <path
+                    id="shape1"
+                    d="M2,23.84L22.18,3.66c2.21-2.21,5.8-2.21,8.02,0l2.78,2.78c2.21,2.21,2.21,5.8,0,8.02l-6.79,6.79"
+                />
+                <path
+                    id="shape2"
+                    d="M50.83,7.76l-20.18,20.18c-2.21,2.21-5.8,2.21-8.02,0l-2.78-2.78c-2.21-2.21-2.21-5.8,0-8.02l6.79-6.79"
+                />
+            </defs>
+
+            <!-- 整体旋转 45°，让“直线阶段”天然是 45° 平行 -->
+            <g id="rot45" transform="rotate(45 26.415 15.8)"></g>
+        </svg>
+
+        <script>
+            /** 创建一个可动画的“可绘制对象”
+             * @param {SVGPathElement} pathEl 目标形状（path）
+             * @param {{className?:string, samples?:number}} opts
+             */
+            function createDrawable(pathEl, opts = {}) {
+                const N = opts.samples ?? 88;
+                const cls = opts.className ?? "";
+                const svg = pathEl.ownerSVGElement;
+                const g = document.createElementNS(svg.namespaceURI, "g");
+                g.setAttribute("class", "glow");
+                const poly = document.createElementNS(svg.namespaceURI, "polyline");
+                poly.setAttribute("fill", "none");
+                poly.setAttribute("class", cls);
+                g.appendChild(poly);
+
+                // 采样目标曲线
+                const len = pathEl.getTotalLength();
+                const target = Array.from({ length: N }, (_, i) => {
+                    const p = pathEl.getPointAtLength((i / (N - 1)) * len);
+                    return [p.x, p.y];
+                });
+                // 直线起步（首末连线）
+                const A = target[0],
+                    B = target[target.length - 1];
+                const start = Array.from({ length: N }, (_, i) => {
+                    const t = i / (N - 1);
+                    return [A[0] * (1 - t) + B[0] * t, A[1] * (1 - t) + B[1] * t];
+                });
+
+                const toAttr = (pts) => pts.map((p) => p.join(",")).join(" ");
+                const lerpPts = (P, Q, t) =>
+                    P.map((p, i) => [p[0] + (Q[i][0] - p[0]) * t, p[1] + (Q[i][1] - p[1]) * t]);
+
+                poly.setAttribute("points", toAttr(start));
+
+                // 法向向量（用于“远离/靠近”）
+                const vx = B[0] - A[0],
+                    vy = B[1] - A[1];
+                const nx = -vy,
+                    ny = vx;
+                const nL = Math.hypot(nx, ny) || 1;
+                const n = [nx / nL, ny / nL];
+
+                // 公共状态
+                let far = 0;
+
+                function setFar(dist) {
+                    far = dist;
+                    g.setAttribute("transform", `translate(${n[0] * dist} ${n[1] * dist})`);
+                }
+
+                function approach(duration = 480, easing = "cubicBezier(.2,.7,.2,1)") {
+                    return anime({
+                        targets: g,
+                        translateX: 0,
+                        translateY: 0,
+                        duration,
+                        easing,
+                    }).finished;
+                }
+
+                function bend(
+                    duration = 720,
+                    easing = "cubicBezier(.2,.9,.3,1)",
+                    hookShift = 8,
+                    delay = 0,
+                    towards = +1,
+                ) {
+                    return anime({
+                        targets: { t: 0 },
+                        t: 1,
+                        duration,
+                        delay,
+                        easing,
+                        update: ({ animations }) => {
+                            const t = animations[0].currentValue;
+                            let cur = lerpPts(start, target, t);
+                            // 后 30% 轻微“扣合”
+                            const kk = Math.max(0, (t - 0.7) / 0.3);
+                            if (kk > 0) cur = cur.map(([x, y]) => [x + towards * hookShift * kk, y]);
+                            poly.setAttribute("points", toAttr(cur));
+                        },
+                        complete: () => {
+                            // 收个小“落笔”质感
+                            poly.style.strokeDasharray = "150";
+                            anime({ targets: poly, strokeDashoffset: [50, 0], duration: 220, easing: "easeOutQuad" });
+                        },
+                    }).finished;
+                }
+
+                function reset() {
+                    poly.setAttribute("points", toAttr(start));
+                    setFar(far);
+                }
+
+                function destroy() {
+                    g.remove();
+                }
+
+                return { node: g, line: poly, setFar, approach, bend, reset, destroy };
+            }
+
+            // ====== 使用示例：两条线靠近 → 弯折并扣合 ======
+            const rot45 = document.getElementById("rot45");
+            const s1 = document.getElementById("shape1");
+            const s2 = document.getElementById("shape2");
+
+            const d1 = createDrawable(s1, { className: "s1", samples: 88 });
+            const d2 = createDrawable(s2, { className: "s2", samples: 88 });
+            rot45.appendChild(d1.node);
+            rot45.appendChild(d2.node);
+
+            // 初始相隔较远（沿法向相反方向）
+            const FAR = 120;
+            d1.setFar(-FAR);
+            d2.setFar(+FAR);
+
+            // 时间线：靠近 → 弯折
+            (async () => {
+                await Promise.all([
+                    d1.approach(480, "cubicBezier(.2,.7,.2,1)"),
+                    // 另一条稍微晚一点靠近
+                    new Promise((r) => setTimeout(r, 80)).then(() => d2.approach(480, "cubicBezier(.2,.7,.2,1)")),
+                ]);
+                await Promise.all([
+                    d1.bend(720, "cubicBezier(.2,.9,.3,1)", 8, 0, +1),
+                    d2.bend(720, "cubicBezier(.2,.9,.3,1)", 8, 160, -1), // 轻微错峰+相向扣合
+                ]);
+                // 动画结束：在这里进入主界面即可
+                // e.g. document.body.classList.add('app-ready');
+            })();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 129.75 34.34">
+  <text transform="translate(45.93 29.09)" style="fill: #343535; font-family: SourceSansPro-Regular, &apos;Source Sans Pro&apos;; font-size: 18px;"><tspan x="0" y="0">Union</tspan><tspan x="45.49" y="0" style="letter-spacing: 0em;">R</tspan><tspan x="55.55" y="0">eim</tspan></text>
+  <g>
+    <path d="M1.5,22.49L21.32,2.67c1.55-1.55,4.07-1.55,5.63,0l4.48,4.48c1.55,1.55,1.55,4.07,0,5.63l-6.08,6.08" style="fill: none; stroke: #097f78; stroke-linecap: round; stroke-miterlimit: 10; stroke-width: 3px;"/>
+    <path d="M47.2,7.44l-19.82,19.82c-1.55,1.55-4.07,1.55-5.63,0l-4.48-4.48c-1.55-1.55-1.55-4.07,0-5.63l6.63-6.63" style="fill: none; stroke: #921d22; stroke-linecap: round; stroke-miterlimit: 10; stroke-width: 3px;"/>
+  </g>
+</svg>

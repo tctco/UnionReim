@@ -1,5 +1,5 @@
 ﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, makeStyles, tokens } from "@fluentui/react-components";
-import { Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
+import { Delete24Regular, MoreVertical24Regular, ArrowDownload24Regular } from "@fluentui/react-icons";
 import { useEffect, useState } from "react";
 import { Add24Regular } from "@fluentui/react-icons";
 import type { DocumentTemplate } from "@common/types";
@@ -36,13 +36,48 @@ export function DocumentListPage() {
     const handleOpen = (id: number) => navigate(`/documents/${id}`);
     const handleDelete = (id: number) => delWithToast(() => deleteDocument(id));
 
+    const handleImport = async () => {
+        try {
+            const response = await window.ContextBridge.document.import({ file_path: "" });
+            if (response.success) {
+                alert(`文档模板导入成功！文档ID: ${response.data}`);
+                window.location.reload();
+            } else {
+                alert(`导入失败: ${response.error}`);
+            }
+        } catch (error) {
+            console.error("Failed to import document:", error);
+            alert("导入失败");
+        }
+    };
+
+    const handleExport = async (doc: DocumentItem, e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            const response = await window.ContextBridge.document.export({ document_id: doc.document_id });
+            if (response.success) {
+                alert(`文档模板导出成功！文件已保存至: ${response.data}`);
+            } else {
+                alert(`导出失败: ${response.error}`);
+            }
+        } catch (error) {
+            console.error("Failed to export document:", error);
+            alert("导出失败");
+        }
+    };
+
     return (
         <ListPageLayout
             title={t("documents.title")}
             actions={
-                <Button appearance="primary" icon={<Add24Regular />} onClick={() => navigate("/documents/new")}>
-                    {t("nav.newDocument")}
-                </Button>
+                <>
+                    <Button appearance="outline" icon={<ArrowDownload24Regular />} onClick={handleImport}>
+                        {t("common.import")}
+                    </Button>
+                    <Button appearance="primary" icon={<Add24Regular />} onClick={() => navigate("/documents/new")}>
+                        {t("nav.newDocument")}
+                    </Button>
+                </>
             }
             searchBar={{
                 value: search,
@@ -66,6 +101,9 @@ export function DocumentListPage() {
                                         </MenuTrigger>
                                         <MenuPopover>
                                             <MenuList>
+                                                <MenuItem icon={<ArrowDownload24Regular />} onClick={(e) => handleExport(d, e)}>
+                                                    {t("common.export")}
+                                                </MenuItem>
                                                 <MenuItem icon={<Delete24Regular />} onClick={(e) => { e.stopPropagation(); setDeleteDialogDoc(d); }}>
                                                     {t("common.delete")}
                                                 </MenuItem>

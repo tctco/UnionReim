@@ -415,6 +415,36 @@ export function registerIpcHandlers(): void {
     }));
     ipcMain.handle("document:delete", respond((document_id: number) => documentService.deleteTemplate(document_id), { successFromBoolean: true }));
 
+    ipcMain.handle("document:export", respond(async (request: import("@common/types").DocumentExportRequest) => {
+        const doc = documentService.getTemplate(request.document_id);
+        let defaultFileName = `document_${request.document_id}.json`;
+        if (doc) {
+            const docName = doc.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
+            defaultFileName = `document_${docName}.json`;
+        }
+        const result = await dialog.showSaveDialog({
+            defaultPath: defaultFileName,
+            filters: [{ name: "JSON Files", extensions: ["json"] }],
+        });
+        if (result.canceled || !result.filePath) {
+            throw new Error("Export canceled");
+        }
+        const exportPath = await exportImportService.exportDocument(request.document_id, result.filePath);
+        return exportPath;
+    }));
+
+    ipcMain.handle("document:import", respond(async () => {
+        const result = await dialog.showOpenDialog({
+            properties: ["openFile"],
+            filters: [{ name: "JSON Files", extensions: ["json"] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            throw new Error("Import canceled");
+        }
+        const document_id = await exportImportService.importDocument(result.filePaths[0]);
+        return document_id;
+    }));
+
     // Project document handlers
     ipcMain.handle("projectDocument:create", respond((req: import("@common/types").CreateProjectDocumentRequest) => documentService.createProjectDocument(req)));
     ipcMain.handle("projectDocument:list", respond((project_id: number) => documentService.listProjectDocuments(project_id)));

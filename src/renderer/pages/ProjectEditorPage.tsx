@@ -3,12 +3,15 @@ import {
     Body1,
     Button,
     Caption1,
+    Tooltip,
     Select,
     makeStyles,
     Spinner,
     tokens,
+    Input,
 } from "@fluentui/react-components";
-import { useEffect, useState, useMemo } from "react";
+import { Edit16Regular, Save16Regular } from "@fluentui/react-icons";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import RenameDialogSimple from "../components/Common/RenameDialogSimple";
@@ -24,7 +27,7 @@ import { useProject, useProjects } from "../hooks/useProjects";
 import { useProjectDocuments } from "../hooks/useDocuments";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
-import { useToastHandler } from "../utils/toastHelpers";
+import { useToastHandler, useUpdateHandler } from "../utils/toastHelpers";
 import { useI18n } from "../i18n";
 import { ListPageLayout } from "../components/Layout/ListPageLayout";
 
@@ -113,6 +116,12 @@ export function ProjectEditorPage() {
     const [deleteConfirmAttachment, setDeleteConfirmAttachment] = useState<Attachment | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [searchText, setSearchText] = useState("");
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [editedTitle, setEditedTitle] = useState("");
+    const titleTextRef = useRef<HTMLSpanElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const [titleWidth, setTitleWidth] = useState<number | undefined>(undefined);
+    const showUpdateToast = useUpdateHandler({ timeout: 1500 });
 
     useEffect(() => {
         if (project) {
@@ -120,8 +129,22 @@ export function ProjectEditorPage() {
             setCreator(project.creator || "");
             setDescription(project.metadata?.description || "");
             setStatus(project.status as 'incomplete' | 'complete' | 'exported');
+            setEditedTitle(project.name || "");
         }
     }, [project]);
+
+    useEffect(() => {
+        if (editingTitle) {
+            // Focus input when entering edit mode and move caret to end
+            const el = inputRef.current;
+            if (el) {
+                el.focus();
+                const val = el.value;
+                el.value = "";
+                el.value = val;
+            }
+        }
+    }, [editingTitle]);
 
     useEffect(() => {
         if (projectId) loadProjectDocs(projectId);
@@ -303,6 +326,25 @@ export function ProjectEditorPage() {
         }
     };
 
+    const handleSaveProjectTitle = async () => {
+        if (!projectId) return;
+        const next = editedTitle.trim();
+        if (!next || next === project?.name) {
+            setEditingTitle(false);
+            return;
+        }
+        try {
+            await showUpdateToast(async () => {
+                await updateProject({ project_id: projectId, name: next });
+                return null as unknown as void;
+            });
+            await loadProject(projectId);
+            setEditingTitle(false);
+        } catch (err) {
+            console.error("Failed to update project name:", err);
+        }
+    };
+
     const [wmAttachment, setWmAttachment] = useState<Attachment | null>(null);
     const [wmDialogOpen, setWmDialogOpen] = useState<boolean>(false);
     const handleWatermark = async (attachment: Attachment) => {
@@ -430,10 +472,59 @@ export function ProjectEditorPage() {
     // Edit existing project
     if (!project) return null;
 
+    const titleNode = !editingTitle ? (
+        <span style={{ display: "inline-flex"}}>
+            <span ref={titleTextRef}>{project.name}</span>
+            <Tooltip content={t("common.edit")} relationship="label">
+                <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Edit16Regular />}
+                    onClick={() => {
+                        setEditedTitle(project.name);
+                        const w = titleTextRef.current?.offsetWidth;
+                        setTitleWidth((w && w > 0) ? w : undefined);
+                        setEditingTitle(true);
+                    }}
+                    style={{ marginLeft: 8 }}
+                />
+            </Tooltip>
+        </span>
+    ) : (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Input
+                size="small"
+                appearance="underline"
+                value={editedTitle}
+                onChange={(_, data) => setEditedTitle(data.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveProjectTitle(); } }}
+                style={{
+                    fontSize: tokens.fontSizeBase600,
+                    fontWeight: tokens.fontWeightSemibold,
+                    color: tokens.colorNeutralForeground1,
+                    backgroundColor: "transparent",
+                    padding: 0,
+                    minWidth: titleWidth ? titleWidth : 160,
+                    width: titleWidth,
+                    boxSizing: "content-box",
+                }}
+                ref={inputRef}
+            />
+            <Tooltip content={t("common.save")} relationship="label">
+                <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Save16Regular />}
+                    onClick={handleSaveProjectTitle}
+                />
+            </Tooltip>
+        </span>
+    );
+
     return (
         <ListPageLayout
-            title={project.name}
-            subtitle={<Caption1>Template: {project.template.name}</Caption1>}
+            title={titleNode}
+            subtitle={<Caption1 style={{ marginLeft: 6}}>{project.template.name}</Caption1>}
             actions={
                 <>
                     <Select
@@ -499,7 +590,11 @@ export function ProjectEditorPage() {
                                 <ProjectItemCard
                                     item={item}
                                     selected={selectedItemId === item.project_item_id}
-                                    onSelect={() => setSelectedItemId(item.project_item_id)}
+                                    onSelect={() =>
+                                        setSelectedItemId((prev) =>
+                                            prev === item.project_item_id ? null : item.project_item_id,
+                                        )
+                                    }
                                     onUploadClick={handleUpload}
                                     onDropUpload={onUploadFromPaths}
                                     onHoverEnter={(a, x, y) => {
