@@ -9,7 +9,6 @@ import {
     Spinner,
     Textarea,
     Title3,
-    Toaster,
     tokens,
 } from "@fluentui/react-components";
 import { Add24Regular, Delete24Regular, Save24Regular } from "@fluentui/react-icons";
@@ -243,7 +242,6 @@ export function TemplateEditorPage() {
 
     return (
         <div className={styles.container}>
-            <Toaster />
             <div className={styles.header}>
                 <Title3>{isNew ? t("templates.editorNewTitle") : t("templates.editorEditTitle")}</Title3>
                 <div style={{ display: "flex", gap: "8px" }}>
@@ -301,7 +299,7 @@ export function TemplateEditorPage() {
                                         <div className={styles.itemHeader}>
                                             <div
                                                 className={styles.dragHandle}
-                                                ref={dragHandleRef as any}
+                                                ref={dragHandleRef as React.Ref<HTMLDivElement>}
                                                 title={t("templates.dragToReorder") || "Drag to reorder"}
                                                 aria-label={t("templates.dragToReorder") || "Drag to reorder"}
                                             >

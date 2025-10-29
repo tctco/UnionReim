@@ -1,4 +1,4 @@
-﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, Toaster, makeStyles, tokens } from "@fluentui/react-components";
+﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Title3, makeStyles, tokens } from "@fluentui/react-components";
 import { Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
 import { Add24Regular } from "@fluentui/react-icons";
@@ -85,7 +85,6 @@ export function DocumentListPage() {
 
     return (
         <div className={styles.container}>
-            <Toaster />
             <div className={styles.header}>
                 <Title3>{t("documents.title")}</Title3>
                 <div style={{ display: "flex", gap: "8px" }}>

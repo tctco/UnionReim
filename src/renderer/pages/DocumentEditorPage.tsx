@@ -1,4 +1,4 @@
-import { Button, Field, Input, Spinner, Title3, Toaster, makeStyles, tokens } from "@fluentui/react-components";
+import { Button, Field, Input, Spinner, Title3, makeStyles, tokens } from "@fluentui/react-components";
 import { Save24Regular } from "@fluentui/react-icons";
 import { useEffect, useMemo, useState } from "react";
 import { useBlocker, useLocation, useNavigate, useParams } from "react-router";
@@ -134,7 +134,6 @@ export function DocumentEditorPage() {
 
     return (
         <div className={styles.container}>
-            <Toaster />
             <ConfirmDialog
                 open={leaveOpen}
                 onOpenChange={setLeaveOpen}

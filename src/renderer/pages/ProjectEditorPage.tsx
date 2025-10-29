@@ -8,10 +8,6 @@ import {
     Spinner,
     Title3,
     tokens,
-    Toaster,
-    useToastController,
-    Toast,
-    ToastTitle,
 } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
@@ -29,6 +25,8 @@ import { useProject, useProjects } from "../hooks/useProjects";
 import { useProjectDocuments } from "../hooks/useDocuments";
 import { useTemplates } from "../hooks/useTemplates";
 import { DEFAULT_HOVER_PREVIEW, isAllowedAttachmentName } from "@common/constants";
+import { useToastHandler } from "../utils/toastHelpers";
+import { useI18n } from "../i18n";
 
 const useStyles = makeStyles({
     container: {
@@ -92,8 +90,9 @@ export function ProjectEditorPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams<{ id: string }>();
+    const { t } = useI18n();
 
-    // 检查路径来判断是新建还是编辑模式
+    // Check path to determine if new or edit mode
     const isNew = location.pathname === "/projects/new";
     const projectId = isNew ? null : parseInt(id || "0");
 
@@ -102,7 +101,12 @@ export function ProjectEditorPage() {
     const { project, loading, loadProject, checkComplete } = useProject(projectId);
     const { load: loadProjectDocs } = useProjectDocuments(projectId);
     const { uploadAttachment, deleteAttachment, removeWatermark, renameAttachment, uploadFromPaths, uploadFromData } = useAttachments();
-    const { dispatchToast } = useToastController();
+    
+    // Toast handlers for various operations
+    const showSuccessToast = useToastHandler({ successTitle: t("projects.uploadSuccess"), timeout: 1500 });
+    const showWarningToast = useToastHandler({ errorTitle: t("projects.unsupportedFileType") });
+    const showCopiedToast = useToastHandler({ successTitle: t("projects.copied"), timeout: 1500 });
+    const showStatusSuccessToast = useToastHandler({ successTitle: t("projects.statusUpdated"), timeout: 1500 });
 
     const [name, setName] = useState("");
     const [creator, setCreator] = useState("");
@@ -223,7 +227,7 @@ export function ProjectEditorPage() {
             if (pathCandidates.length === 0 && dataCandidates.length === 0) return;
 
             e.preventDefault();
-            try {
+            await showSuccessToast(async () => {
                 if (pathCandidates.length > 0) {
                     await onUploadFromPaths(selectedItemId, pathCandidates);
                 }
@@ -231,30 +235,24 @@ export function ProjectEditorPage() {
                     await uploadFromData(selectedItemId, dataCandidates);
                 }
                 if (projectId) await loadProject(projectId);
-                dispatchToast(<Toast><ToastTitle>上传成功</ToastTitle></Toast>, { intent: "success" });
-            } catch (err) {
-                console.error("Paste upload failed:", err);
-                dispatchToast(<Toast><ToastTitle>上传失败</ToastTitle></Toast>, { intent: "error" });
-            }
+            });
         }
         window.addEventListener("paste", onPaste);
         return () => window.removeEventListener("paste", onPaste);
     }, [selectedItemId, projectId, loadProject]);
 
     const onUploadFromPaths = async (project_item_id: number, files: UploadCandidate[]) => {
-        try {
-            const filtered = files.filter((f) => isAllowedAttachmentName(f.original_name || f.path));
-            if (filtered.length === 0) {
-                dispatchToast(<Toast><ToastTitle>不支持的文件类型</ToastTitle></Toast>, { intent: "warning" });
-                return;
-            }
+        const filtered = files.filter((f) => isAllowedAttachmentName(f.original_name || f.path));
+        if (filtered.length === 0) {
+            await showWarningToast(async () => {
+                throw new Error(t("projects.unsupportedFileType"));
+            });
+            return;
+        }
+        await showSuccessToast(async () => {
             await uploadFromPaths(project_item_id, filtered);
             if (projectId) await loadProject(projectId);
-            dispatchToast(<Toast><ToastTitle>上传成功</ToastTitle></Toast>, { intent: "success" });
-        } catch (err) {
-            console.error("Upload from paths failed:", err);
-            dispatchToast(<Toast><ToastTitle>上传失败</ToastTitle></Toast>, { intent: "error" });
-        }
+        });
     };
 
     const handleCreateProject = async () => {
@@ -329,13 +327,12 @@ export function ProjectEditorPage() {
     };
 
     const copyPath = async (attachment: Attachment, use_watermarked: boolean) => {
-        try {
+        await showCopiedToast(async () => {
             const abs = await window.ContextBridge.attachment.getPath(attachment.attachment_id, use_watermarked);
             if (abs.success && abs.data) {
                 await navigator.clipboard.writeText(abs.data);
-                dispatchToast(<Toast><ToastTitle>Copied</ToastTitle></Toast>, { intent: "success", timeout: 1500 });
             }
-        } catch (err) { console.error("Failed to copy path:", err); }
+        });
     };
     const handleCopyPathOriginal = (a: Attachment) => copyPath(a, false);
     const handleCopyPathWatermarked = (a: Attachment) => copyPath(a, true);
@@ -442,7 +439,9 @@ export function ProjectEditorPage() {
                                 try {
                                     const ok = await checkComplete(projectId);
                                     if (!ok) {
-                                        dispatchToast(<Toast><ToastTitle>Some required items are missing</ToastTitle></Toast>, { intent: "warning" });
+                                        await showWarningToast(async () => {
+                                            throw new Error(t("projects.requiredItemsMissing"));
+                                        });
                                         setStatus('incomplete');
                                         return;
                                     }
@@ -450,14 +449,13 @@ export function ProjectEditorPage() {
                                     console.error("Status validation failed:", err);
                                 }
                             }
-                            try {
+                            const result = await showStatusSuccessToast(async () => {
                                 await updateProject({ project_id: projectId, status: next });
                                 setStatus(next);
                                 await loadProject(projectId);
-                                dispatchToast(<Toast><ToastTitle>Status updated</ToastTitle></Toast>, { intent: "success" });
-                            } catch (err) {
-                                console.error("Failed to update status:", err);
-                                dispatchToast(<Toast><ToastTitle>Failed to update status</ToastTitle></Toast>, { intent: "error" });
+                            });
+                            // Revert status if update failed
+                            if (!result) {
                                 setStatus(project?.status as 'incomplete' | 'complete' | 'exported' || 'incomplete');
                             }
                         }}
@@ -479,14 +477,10 @@ export function ProjectEditorPage() {
                         key={item.project_item_id}
                         onUpload={(files) => onUploadFromPaths(item.project_item_id, files)}
                         onUploadData={async (files) => {
-                            try {
+                            await showSuccessToast(async () => {
                                 await uploadFromData(item.project_item_id, files);
                                 if (projectId) await loadProject(projectId);
-                                dispatchToast(<Toast><ToastTitle>上传成功</ToastTitle></Toast>, { intent: "success" });
-                            } catch (err) {
-                                console.error("Upload from data failed:", err);
-                                dispatchToast(<Toast><ToastTitle>上传失败</ToastTitle></Toast>, { intent: "error" });
-                            }
+                            });
                         }}
                     >
                                 <ProjectItemCard
@@ -537,9 +531,6 @@ export function ProjectEditorPage() {
                 onCancel={closeRenameDialog}
                 onConfirm={confirmRename}
             />
-
-            {/* Toaster for copied feedback */}
-            <Toaster />
 
             {/* Delete Confirmation Dialog */}
             <ConfirmDialog

@@ -6,7 +6,6 @@ import {
     AccordionPanel,
     makeStyles,
     tokens,
-    Toaster,
     Title3,
 } from "@fluentui/react-components";
 import { LocalLanguage24Regular } from "@fluentui/react-icons";
@@ -257,8 +256,6 @@ export function SettingsPage() {
 
     return (
         <div className={styles.container}>
-            <Toaster />
-
             {/* Confirm migration dialog */}
             <ConfirmDialog
                 open={confirmOpen}
