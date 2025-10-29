@@ -229,7 +229,7 @@ export default {
   }
   ,
   app: {
-    title: "票据匣",
+    title: "UnionReim",
   },
   sidebar: {
     tagline: "管理您的报销材料",
@@ -250,7 +250,7 @@ export default {
     }
   },
   home: {
-    welcome: "欢迎使用票据匣",
+    welcome: "欢迎使用UnionReim票据匣",
     tagline: "您的专业报销材料管理助手，让报销变得简单而高效",
     cards: {
       projects: {

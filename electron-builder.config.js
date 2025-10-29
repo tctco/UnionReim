@@ -23,7 +23,7 @@ const platformSpecificConfigurations = {
         ...baseConfig,
         afterPack: "./build/macos/codeSign.mjs",
         mac: {
-            icon: "build/app-icon-dark.png",
+            icon: "build/logo-img.png",
             target: [{ target: "dmg" }, { target: "zip" }],
         },
     },
@@ -39,7 +39,7 @@ const platformSpecificConfigurations = {
             languages: ["en-US"],
         },
         win: {
-            icon: "build/app-icon-dark.png",
+            icon: "build/logo-img.png",
             target: [{ target: "msi" }, { target: "nsis" }, { target: "zip" }, { target: "appx" }],
         },
     },
@@ -47,7 +47,7 @@ const platformSpecificConfigurations = {
         ...baseConfig,
         linux: {
             category: "Utility",
-            icon: "build/app-icon-dark.png",
+            icon: "build/logo-img.png",
             target: [{ target: "AppImage" }, { target: "deb" }, { target: "zip" }],
         },
     },
