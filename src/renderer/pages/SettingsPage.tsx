@@ -8,7 +8,7 @@ import {
     tokens,
     Title3,
 } from "@fluentui/react-components";
-import { LocalLanguage24Regular } from "@fluentui/react-icons";
+import { LocalLanguage16Regular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
 import { useSaveHandler } from "../utils/toastHelpers";
 import type { AppSettings, WatermarkSettings } from "@common/types";
@@ -370,7 +370,7 @@ export function SettingsPage() {
                 </AccordionItem>
                 <AccordionItem value="language">
                     <AccordionHeader>
-                        <LocalLanguage24Regular />&nbsp;{t("settings.language")}
+                        <LocalLanguage16Regular />&nbsp;{t("settings.language")}
                     </AccordionHeader>
                     <AccordionPanel>
                         <LanguageSettingsPanel
