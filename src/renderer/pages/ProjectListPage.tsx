@@ -1,11 +1,10 @@
 import type { Project } from "@common/types";
-import { Body1, Button, makeStyles, Spinner, tokens } from "@fluentui/react-components";
-import { Add24Regular } from "@fluentui/react-icons";
+import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, Badge, makeStyles, tokens } from "@fluentui/react-components";
+import { Add24Regular, ArrowUpload24Regular, Edit24Regular, Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
 import { ListPageLayout } from "../components/Layout/ListPageLayout";
-import ProjectCard from "../components/Project/ProjectCard";
 import { useProjects } from "../hooks/useProjects";
 import { useI18n } from "../i18n";
 
@@ -14,6 +13,23 @@ const useStyles = makeStyles({
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
         gap: "16px",
+    },
+    card: {
+        width: "100%",
+        cursor: "pointer",
+        ":hover": {
+            backgroundColor: tokens.colorNeutralBackground1Hover,
+        },
+    },
+    description: {
+        marginTop: "8px",
+        color: tokens.colorNeutralForeground3,
+    },
+    metadata: {
+        marginTop: "12px",
+        display: "flex",
+        gap: "16px",
+        color: tokens.colorNeutralForeground4,
     },
     emptyState: {
         textAlign: "center",
@@ -121,16 +137,53 @@ export function ProjectListPage() {
                 </div>
             ) : (
                 <div className={styles.grid}>
-                    {projects.map((project) => (
-                        <ProjectCard
-                          key={project.project_id}
-                          project={project}
-                          onClick={() => handleView(project)}
-                          onEdit={(e) => { e.stopPropagation(); handleEdit(project); }}
-                          onExport={(e) => handleExport(project, e)}
-                          onDelete={(e) => { e.stopPropagation(); setDeleteDialogProject(project); }}
-                        />
-                    ))}
+                    {projects.map((project) => {
+                        const statusColorMap: Record<string, "warning" | "success" | "informative" | "subtle"> = {
+                            incomplete: "warning",
+                            complete: "success",
+                            exported: "informative",
+                        };
+                        return (
+                            <Card key={project.project_id} className={styles.card} onClick={() => handleView(project)}>
+                                <CardHeader
+                                    header={
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <Body1>{project.name}</Body1>
+                                            <Badge color={statusColorMap[project.status] || "subtle"}>{project.status}</Badge>
+                                        </div>
+                                    }
+                                    action={
+                                        <Menu>
+                                            <MenuTrigger disableButtonEnhancement>
+                                                <Button appearance="subtle" icon={<MoreVertical24Regular />} onClick={(e) => e.stopPropagation()} />
+                                            </MenuTrigger>
+                                            <MenuPopover>
+                                                <MenuList>
+                                                    <MenuItem icon={<Edit24Regular />} onClick={(e) => { e.stopPropagation(); handleEdit(project); }}>
+                                                        {t("common.edit")}
+                                                    </MenuItem>
+                                                    <MenuItem icon={<ArrowUpload24Regular />} onClick={(e) => handleExport(project, e)}>
+                                                        {t("common.export")}
+                                                    </MenuItem>
+                                                    <MenuItem icon={<Delete24Regular />} onClick={(e) => { e.stopPropagation(); setDeleteDialogProject(project); }}>
+                                                        {t("common.delete")}
+                                                    </MenuItem>
+                                                </MenuList>
+                                            </MenuPopover>
+                                        </Menu>
+                                    }
+                                />
+                                <div className={styles.metadata}>
+                                    <Caption1>
+                                        {t("projects.created")}: {new Date(project.create_time).toLocaleDateString()}
+                                    </Caption1>
+                                    <Caption1>
+                                        {t("projects.creator")}: {project.creator || t("common.unknown")}
+                                    </Caption1>
+                                </div>
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
 

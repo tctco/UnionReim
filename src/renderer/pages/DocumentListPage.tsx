@@ -1,6 +1,6 @@
 ﻿import { Body1, Button, Caption1, Card, CardHeader, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, makeStyles, tokens } from "@fluentui/react-components";
 import { Delete24Regular, MoreVertical24Regular } from "@fluentui/react-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Add24Regular } from "@fluentui/react-icons";
 import type { DocumentTemplate } from "@common/types";
 import { useNavigate } from "react-router";
@@ -12,55 +12,12 @@ import { ListPageLayout } from "../components/Layout/ListPageLayout";
 
 const useStyles = makeStyles({
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "16px" },
-    card: { cursor: "pointer", ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover } },
-    cardContent: { padding: "12px 16px" },
+    card: { width: "100%", cursor: "pointer", ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover } },
+    description: { marginTop: "8px", color: tokens.colorNeutralForeground3 },
+    metadata: { marginTop: "12px", display: "flex", gap: "16px", color: tokens.colorNeutralForeground4 },
 });
 
 type DocumentItem = DocumentTemplate;
-
-function DocumentActions({ onDelete, onOpenMenu }: { onDelete: (e: React.MouseEvent) => void; onOpenMenu: (e: React.MouseEvent) => void }) {
-    const { t } = useI18n();
-    return (
-        <Menu>
-            <MenuTrigger disableButtonEnhancement>
-                <Button appearance="subtle" icon={<MoreVertical24Regular />} onClick={onOpenMenu} />
-            </MenuTrigger>
-            <MenuPopover>
-                <MenuList>
-                    <MenuItem icon={<Delete24Regular />} onClick={onDelete}>
-                        {t("common.delete")}
-                    </MenuItem>
-                </MenuList>
-            </MenuPopover>
-        </Menu>
-    );
-}
-
-function DocumentCard({ d, onOpen, onDelete, className, contentClassName }: {
-    d: DocumentItem;
-    onOpen: () => void;
-    onDelete: () => void;
-    className: string;
-    contentClassName: string;
-}) {
-    const { t } = useI18n();
-    const stop = (e: React.MouseEvent) => e.stopPropagation();
-    const updated = useMemo(() => new Date(d.update_time).toLocaleDateString(), [d.update_time]);
-    return (
-        <Card className={className} onClick={onOpen}>
-            <CardHeader
-                header={<Body1>{d.name}</Body1>}
-                action={<DocumentActions onDelete={(e) => { stop(e); onDelete(); }} onOpenMenu={stop} />}
-            />
-            <div className={contentClassName}>
-                <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{d.description || ""}</Caption1>
-                <div style={{ marginTop: 8, color: tokens.colorNeutralForeground4 }}>
-                    <Caption1>{t("documents.updated")}: {updated}</Caption1>
-                </div>
-            </div>
-        </Card>
-    );
-}
 
 export function DocumentListPage() {
     const styles = useStyles();
@@ -99,14 +56,34 @@ export function DocumentListPage() {
             {!loading && (
                 <div className={styles.grid}>
                     {documents.map((d) => (
-                        <DocumentCard
-                            key={d.document_id}
-                            d={d}
-                            className={styles.card}
-                            contentClassName={styles.cardContent}
-                            onOpen={() => handleOpen(d.document_id)}
-                            onDelete={() => setDeleteDialogDoc(d)}
-                        />
+                        <Card key={d.document_id} className={styles.card} onClick={() => handleOpen(d.document_id)}>
+                            <CardHeader
+                                header={<Body1>{d.name}</Body1>}
+                                action={
+                                    <Menu>
+                                        <MenuTrigger disableButtonEnhancement>
+                                            <Button appearance="subtle" icon={<MoreVertical24Regular />} onClick={(e) => e.stopPropagation()} />
+                                        </MenuTrigger>
+                                        <MenuPopover>
+                                            <MenuList>
+                                                <MenuItem icon={<Delete24Regular />} onClick={(e) => { e.stopPropagation(); setDeleteDialogDoc(d); }}>
+                                                    {t("common.delete")}
+                                                </MenuItem>
+                                            </MenuList>
+                                        </MenuPopover>
+                                    </Menu>
+                                }
+                            />
+                            {d.description && (
+                                <div className={styles.description}>
+                                    <Caption1>{d.description}</Caption1>
+                                </div>
+                            )}
+                            <div className={styles.metadata}>
+                                <Caption1>{t("documents.updated")}: {new Date(d.update_time).toLocaleDateString()}</Caption1>
+                                <Caption1>{t("common.creator")}: {d.creator || t("common.unknown")}</Caption1>
+                            </div>
+                        </Card>
                     ))}
                 </div>
             )}

@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS documents (
     document_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
+    creator TEXT,
     content_html TEXT NOT NULL,
     create_time INTEGER NOT NULL,
     update_time INTEGER NOT NULL
@@ -188,7 +189,26 @@ export class DatabaseService {
             }
         }
 
-        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 2)}`);
+        // Migration 3: Add creator field to documents table
+        if (currentVersion < 3) {
+            try {
+                const columnExists = this.db.prepare(`
+                    SELECT COUNT(*) as count FROM pragma_table_info('documents')
+                    WHERE name = 'creator'
+                `).get() as { count: number };
+
+                if (columnExists.count === 0) {
+                    this.db.exec('ALTER TABLE documents ADD COLUMN creator TEXT');
+                    console.log('Migration 3: Added creator column to documents table');
+                }
+
+                this.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(3, Date.now());
+            } catch (error) {
+                console.error('Migration 3 failed:', error);
+            }
+        }
+
+        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 3)}`);
     }
 
     public getDatabase(): Database.Database {

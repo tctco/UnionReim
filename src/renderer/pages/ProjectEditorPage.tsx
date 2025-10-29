@@ -51,7 +51,7 @@ const useStyles = makeStyles({
     },
     itemCard: {
         marginBottom: "4px",
-        padding: "12px",
+        padding: "6px 12px",
         backgroundColor: tokens.colorNeutralBackground1,
         borderRadius: tokens.borderRadiusMedium,
     },

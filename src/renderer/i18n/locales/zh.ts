@@ -33,6 +33,7 @@ export default {
     editorSave: "保存",
     fieldName: "名称",
     fieldDescription: "描述",
+    fieldCreator: "创建人",
     loadingOne: "正在加载文档...",
     nameRequired: "名称不能为空",
     placeholdersTip: "支持占位符：{list}",

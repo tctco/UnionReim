@@ -20,10 +20,10 @@ export class DocumentService {
   createTemplate(req: CreateDocumentTemplateRequest): DocumentTemplate {
     const now = Date.now();
     const stmt = this.db.prepare(`
-      INSERT INTO documents (name, description, content_html, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO documents (name, description, creator, content_html, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(req.name, req.description || null, req.content_html || "", now, now);
+    const result = stmt.run(req.name, req.description || null, req.creator || null, req.content_html || "", now, now);
     return this.getTemplate(result.lastInsertRowid as number)!;
   }
 
@@ -52,12 +52,13 @@ export class DocumentService {
     const next = {
       name: req.name ?? prev.name,
       description: req.description ?? prev.description,
+      creator: req.creator ?? prev.creator,
       content_html: req.content_html ?? prev.content_html,
     };
     const stmt = this.db.prepare(`
-      UPDATE documents SET name = ?, description = ?, content_html = ?, update_time = ? WHERE document_id = ?
+      UPDATE documents SET name = ?, description = ?, creator = ?, content_html = ?, update_time = ? WHERE document_id = ?
     `);
-    stmt.run(next.name, next.description || null, next.content_html, Date.now(), req.document_id);
+    stmt.run(next.name, next.description || null, next.creator || null, next.content_html, Date.now(), req.document_id);
     return this.getTemplate(req.document_id);
   }
 

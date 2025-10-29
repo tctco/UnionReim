@@ -40,35 +40,56 @@ export function DocumentEditorPage() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [html, setHtml] = useState<string>("<p></p>");
+    const [creator, setCreator] = useState("");
 
-    // 初始快照用于脏值检测
-    const [initialSnapshot, setInitialSnapshot] = useState({ name: "", description: "", html: "<p></p>" });
+    // Initial snapshot for dirty detection
+    const [initialSnapshot, setInitialSnapshot] = useState({ name: "", description: "", creator: "", html: "<p></p>" });
     const [leaveOpen, setLeaveOpen] = useState(false);
 
     useEffect(() => {
         if (document) {
             const nextName = document.name;
             const nextDesc = document.description || "";
+            const nextCreator = document.creator || "";
             const nextHtml = document.content_html || "<p></p>";
             setName(nextName);
             setDescription(nextDesc);
+            setCreator(nextCreator);
             setHtml(nextHtml);
-            setInitialSnapshot({ name: nextName, description: nextDesc, html: nextHtml });
+            setInitialSnapshot({ name: nextName, description: nextDesc, creator: nextCreator, html: nextHtml });
         } else if (isNew) {
-            // 新建文档的初始快照
-            setInitialSnapshot({ name: "", description: "", html: "<p></p>" });
+            // Initial snapshot for new document
+            setInitialSnapshot({ name: "", description: "", creator: "", html: "<p></p>" });
         }
     }, [document, isNew]);
+
+    // Pre-fill creator for new documents from settings service defaultUserName
+    useEffect(() => {
+        if (!isNew) return;
+        (async () => {
+            try {
+                const res = await window.ContextBridge.settings.get();
+                const userName = res.success ? res.data?.defaultUserName : undefined;
+                if (userName) {
+                    setCreator(userName);
+                    setInitialSnapshot((prev) => ({ ...prev, creator: userName || "" }));
+                }
+            } catch {
+                // ignore
+            }
+        })();
+    }, [isNew]);
 
     const isDirty = useMemo(() => {
         return (
             name !== initialSnapshot.name ||
             description !== initialSnapshot.description ||
+            creator !== initialSnapshot.creator ||
             html !== initialSnapshot.html
         );
-    }, [name, description, html, initialSnapshot]);
+    }, [name, description, creator, html, initialSnapshot]);
 
-    // 路由离开拦截（React Router v7）
+    // Route blocker for navigation (React Router v7)
     const blocker = useBlocker(isDirty);
 
     useEffect(() => {
@@ -77,7 +98,7 @@ export function DocumentEditorPage() {
         }
     }, [blocker.state]);
 
-    // 关闭/刷新窗口时提示
+    // Warn user when closing/refreshing window
     useEffect(() => {
         const handler = (e: BeforeUnloadEvent) => {
             if (!isDirty) return;
@@ -98,28 +119,28 @@ export function DocumentEditorPage() {
         }
 
         if (isNew) {
-            const created = (await saveWithToast(() => createDocument({ name, description, content_html: html }))) as unknown;
+            const created = (await saveWithToast(() => createDocument({ name, description, creator, content_html: html }))) as unknown;
             const hasId = (v: unknown): v is Pick<DocumentTemplate, "document_id"> => {
                 if (typeof v !== "object" || v === null) return false;
                 const maybe = v as Record<string, unknown>;
                 return typeof maybe.document_id === "number";
             };
             if (created && hasId(created)) {
-                // 保存成功后重置快照，避免导航被阻止
-                setInitialSnapshot({ name, description, html });
+                // Reset snapshot after successful save to prevent navigation blocking
+                setInitialSnapshot({ name, description, creator, html });
             }
             return;
         }
         if (documentId) {
-            const updated = (await saveWithToast(() => updateDocument({ document_id: documentId, name, description, content_html: html }))) as unknown;
+            const updated = (await saveWithToast(() => updateDocument({ document_id: documentId, name, description, creator, content_html: html }))) as unknown;
             const hasId = (v: unknown): v is Pick<DocumentTemplate, "document_id"> => {
                 if (typeof v !== "object" || v === null) return false;
                 const maybe = v as Record<string, unknown>;
                 return typeof maybe.document_id === "number";
             };
             if (updated && hasId(updated)) {
-                // 保存成功后重置快照，避免导航被阻止
-                setInitialSnapshot({ name, description, html });
+                // Reset snapshot after successful save to prevent navigation blocking
+                setInitialSnapshot({ name, description, creator, html });
             }
         }
     };
@@ -165,6 +186,9 @@ export function DocumentEditorPage() {
                 </Field>
                 <Field label={t("documents.fieldDescription")}>
                     <Input value={description} onChange={(_, d) => setDescription(d.value)} />
+                </Field>
+                <Field label={t("documents.fieldCreator")}>
+                    <Input value={creator} onChange={(_, d) => setCreator(d.value)} />
                 </Field>
             </div>
             <div className={styles.section}>

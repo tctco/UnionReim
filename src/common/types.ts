@@ -279,6 +279,7 @@ export interface DocumentTemplate {
     document_id: number;
     name: string;
     description?: string;
+    creator?: string;
     content_html: string; // stored HTML from Quill
     create_time: number;
     update_time: number;
@@ -298,6 +299,7 @@ export interface ProjectDocument {
 export interface CreateDocumentTemplateRequest {
     name: string;
     description?: string;
+    creator?: string;
     content_html?: string;
 }
 
@@ -305,6 +307,7 @@ export interface UpdateDocumentTemplateRequest {
     document_id: number;
     name?: string;
     description?: string;
+    creator?: string;
     content_html?: string;
 }
 

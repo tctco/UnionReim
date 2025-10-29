@@ -35,6 +35,7 @@ export default {
     editorSave: "Save",
     fieldName: "Name",
     fieldDescription: "Description",
+    fieldCreator: "Creator",
     loadingOne: "Loading document...",
     nameRequired: "Name is required",
     placeholdersTip: "Supported placeholders: {list}",
