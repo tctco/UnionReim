@@ -1,6 +1,8 @@
 # UnionReim
 
-![logo](./src/static/logo.png)
+<p align="center">
+  <img src="./src/static/logo.png" alt="UnionReim Logo" width="160" />
+</p>
 
 > A tool for managing reimbursement materials and any structured documents.
 
