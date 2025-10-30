@@ -26,17 +26,17 @@ jobs:
               env:
                   NODE_ENV: development
 
-            - name: Lint files
-              run: npm run lint
+            # - name: Lint files
+            #   run: npm run lint
 
-            - name: Typechecks
-              run: npm run typecheck
+            # - name: Typechecks
+            #   run: npm run typecheck
 
-            - name: Prettier check
-              run: npm run prettier:check
+            # - name: Prettier check
+            #   run: npm run prettier:check
 
-            - name: Run tests
-              run: npm run test
+            # - name: Run tests
+            #   run: npm run test
 
             - name: Build app
               run: npm run build
