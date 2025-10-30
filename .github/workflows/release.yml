@@ -56,3 +56,19 @@ jobs:
               env:
                   CI: true
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    upload-templates:
+        runs-on: ubuntu-latest
+        name: Upload templates to release
+        needs: release
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Upload template JSON files to GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  files: |
+                      src/static/document_未使用公务卡报销情况说明.json
+                      src/static/template_国内差旅.json
