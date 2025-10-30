@@ -1,459 +1,153 @@
-# 报销材料辅助软件 — 需求说明文档
-
-版本：v1.0
-日期：2025-10-14
-
-## 一、背景与目标
-
-随着报销材料种类越来越多（发票、支付记录、截图、凭证等），手动整理、打水印、合并文档等流程繁琐且容易出错。本软件旨在辅助用户：
-
-* 通过“报销模板 + 实例化”机制快速组织、管理某一次报销所需所有材料
-* 对图片 / PDF /文档进行预览、标注／水印处理
-* 一键打包 / 打印 / 导出整个报销项目
-* 支持模板迁移 / 导入 / 导出，为多人协作场景服务
-
-目标用户可以是个人报销用户，也可以是小团队中的报账同事。
+# UnionReim
 
----
-
-## 二、术语与定义
+![logo](./src/static/logo.png)
 
-| 术语                            | 含义                                             |
-| ----------------------------- | ---------------------------------------------- |
-| 模板（Template）                  | 报销材料结构的蓝本，定义某类报销项目需要哪些条目（Item）                 |
-| 报销项目 / （Project） | 基于某个模板创建的具体报销任务，如 “2025ISICDM会议报销”             |
-| 条目（Entry）              | 模板中的单个材料单元，比如 “会议邀请函”、“住宿发票” 等，每个条目可以绑定一个或多个文件 |
-| 材料文件                          | 附属于某条目的实际文件，如图片、PDF、OFD、截图等                    |
-| 水印规则                          | 在某些条目（通常是支付记录截图、凭证等）上自动插入文字或标识性的水印             |
-| 导入 / 导出包                      | 一个压缩包或结构化文件（如 JSON + 附件）用于在用户之间迁移报销项目          |
+> A tool for managing reimbursement materials and any structured documents.
 
----
 
-## 三、总体架构与模块划分（高层）
+## Overview
 
-下面是系统的主要模块／子系统，以及它们之间的关系。
+UnionReim helps you organize, fill, watermark, preview, track, and export documents required for reimbursements or other structured workflows (e.g., awards, publications). It supports template strings for automatic field filling, on-the-fly watermarking, quick previews, project tracking, and one-click export to combined PDFs.
 
-```
-+-------------------------+
-|       界面 / 前端        |
-| — 模板管理                |
-| — 报销项目管理            |
-| — 条目填写 / 文件绑定      |
-| — 预览 / 审核界面          |
-| — 导出 / 打印 / 打包        |
-+-----------+-------------+
-            |
-            | IPC / API（Electron 主进程 / 渲染进程桥接）
-            |
-+-----------v-------------+
-|     主进程 / 后端逻辑     |
-| — 模板 / 项目 CRUD       |
-| — 文件存取 / 数据库操作   |
-| — PDF / 文档 / 图片处理    |
-| — 水印 / 标注 / 合并        |
-| — 导出 / 打包 /导入逻辑     |
-+-----------+-------------+
-            |
-            | 本地存储
-            |
-+-----------v-------------+
-|     存储层 / 数据库        |
-| — SQLite 数据库           |
-| — 文件系统（发票文件 / 附件） |
-+-------------------------+
-```
 
-关键流程示意（简略）：
+## Key Features
 
-1. 用户定义 / 管理模板
-2. 基于模板创建报销项目实例
-3. 在实例中对每个条目绑定文件
-4. 对需要打水印的条目执行水印/标注
-5. 预览整个报销项目
-6. 导出为 PDF / 打印 / 打包 /导入给别人
+- Automatic template string filling for both files and documents
+- Image watermarking with customizable styles and optional auto-watermark on upload
+- Instant previews and lightweight editing before watermarking
+- Reusable document templates (e.g., forms you regularly re-fill)
+- Project progress tracking and quick filtering for pending items
+- Export a single combined PDF for printing, or export all project files
+- Multiple languages and themes (supports Chinese and light theme)
 
----
 
-## 四、功能需求
+## Walkthrough
 
-下面是软件应该支持的具体功能，按照模块/子域来组织。
+Below is a step-by-step tour with screenshots from the `docs/` folder.
 
-### 4.1 模板管理
+### 1. Home
 
-#### 4.1.1 创建模板
+Start from the home page to access your projects and features.
 
-* 用户可以新建一个模板（Template），为模板命名（如 “会议报销”、“设备采购报销” 等）
+![Home Page](./docs/1.homePage.jpg)
 
-* 在模板中定义多个条目（Item），每个条目的属性包括：
+### 2. Import a reimbursement template (or create your own file-management template)
 
-  | 属性            | 类型 / 格式      | 说明 / 示例                                   |
-  | ------------- | ------------ | ----------------------------------------- |
-  | 条目名称          | 字符串          | 如 “会议邀请函”、 “住宿发票” 等                       |
-  | 条目描述          | 多行文本（可选）     | 如 “酒店住宿发票与账单”                             |
-  | 是否必填          | 布尔           | 标识该条目在实例化过程中是否必须上传文件                      |
-  | 支持文件类型        | 文件类型集合       | 如 `["pdf","jpg","png","ofd"]` 或 “任意”      |
-  | 是否需要水印        | 布尔           | 如果需要，后续提交的材料会自动插入水印                       |
-  | 水印模板 / 水印文字规则 | 模板参数 / 可替换变量 | 如 “张三 会议交通 支付记录” 或支持变量占位（如 `{用户名} {条目名}`） |
-  | 是否支持多文件       | 布尔           | 是否可以对该条目绑定多个文件（如住宿发票 + 住宿账单）              |
-  | 默认排序 / 显示顺序   | 整数           | 在 UI 中条目的显示顺序                             |
-  | 条目标签 / 分类     | 字符串或枚举       | 如 “交通”、“住宿”、“注册费” 等（方便筛选 / 分组）            |
+You can import a reimbursement template, or create your own for managing awards, publications, and more.
 
-* 模板可以编辑 / 删除 /克隆
+![Import Template](./docs/2.importTemplate.jpg)
 
-* 模板可以设为“默认模板”（可选，以便快速创建）
+### 3. Files requiring watermark support template strings with auto-fill
 
-#### 4.1.2 模板列表 / 浏览 / 搜索
+When a file needs a watermark, you can use template strings; fields are filled automatically.
 
-* 显示已有模板列表，包括模板名称、创建时间、条目数量等摘要
-* 支持按照模板名 /标签 /条目数量等过滤 / 搜索
-* 点击模板则进入模板详情界面，查看 / 编辑条目
+![Template Strings for Files](./docs/3.templateString1.jpg)
 
-### 4.2 报销项目实例（Project）
+### 4. Preview required files for the template
 
-#### 4.2.1 创建实例
+Quickly preview which files are required and their current status.
 
-* 用户从已有模板选择一个模板，创建一个实例
-* 在创建时，可以填写该实例的元数据（如下所列）
-* 实例名称（项目名）为必填
-* 创建实例后，系统会基于模板中定义的条目为该实例自动生成空条目（待填状态）
+![Template Preview](./docs/4.templatePreview.jpg)
 
-#### 4.2.2 实例元数据 / 标识
+### 5. Import a document for recurring updates
 
-每一个报销实例项目需要维护一些元信息：
+Documents that need frequent updates (e.g., a student’s “Statement of Not Using a Corporate Card”) can be imported as reusable templates.
 
-* **项目名**（必填）
+![Import Document](./docs/5.importDocument.jpg)
 
-* **用户名 / 创建者**（系统自动 / 可编辑）
+### 6. Documents also support template strings with auto-fill when generating PDFs
 
-* **唯一 ID**（系统生成，用于内部标识）
+Document templates use the same template-string auto-fill during PDF generation.
 
-* **创建时间 / 更新时间**（系统自动记录）
+![Template Strings for Documents](./docs/6.templateString2.jpg)
 
-* **可选元信息**（模板可扩展字段）：
+### 7. Fill key fields like `userName`, `studentID`, and optionally enable Auto Watermark
 
-  * 会议地点
-  * 起始日期 / 结束日期
-  * 项目描述
-  * 所属部门 / 卡号 /预算代码
-  * 备注 / 附加说明
+Provide key-value pairs (e.g., `userName`, `studentID`). Enable Auto Watermark to automatically watermark uploaded images that require it.
 
-* 这些元信息应可在实例创建后继续编辑、补充（但有些重要字段如项目名可以设为不可改，视设计）
+![Settings Page and Auto Watermark](./docs/7.settingsPage.jpg)
 
-#### 4.2.3 实例列表 / 浏览
+### 8. Instant preview for uploaded files
 
-* 在主界面展示已有所有报销实例，显示项目名 /模板 /创建时间 /状态（未完成 / 已完成 /已导出等）
-* 支持排序 / 搜索 /筛选
-* 点击进入某个实例后进入 “条目填写 / 管理” 界面
+Uploaded files can be previewed immediately.
 
-### 4.3 条目管理 / 文件绑定 /处理
+![Edit/Preview Project Files](./docs/8.editProject.jpg)
 
-在某个报销实例内部，用户对每个条目进行操作。
+### 9. Remember the document template? String variables are already filled in preview
 
-#### 4.3.1 文件绑定 / 上传 / 关联
+Open the document preview; string-type variables are auto-filled, and you only need to add special changes.
 
-* 对于每个条目，用户可以上传 / 绑定文件（图片 / PDF / OFD /其他支持格式）
-* 支持拖放：用户可以把文件从操作系统拖入条目区域来上传 / 关联
-* 支持从系统文件对话框选择文件
-* 若条目允许多文件（“是否支持多文件”设为 true），则可以上传多个文件；否则只能绑定一个文件（若已有文件则替换或覆盖）
-* 上传 / 关联时要做基础校验：文件类型是否允许，文件大小是否超限（若有上限设定）
+![Generate Document PDF](./docs/9.generateDocumentPDF.jpg)
 
-#### 4.3.2 预览文件 / 浏览
+### 10. The generated document PDF includes your signature
 
-* 对绑定的文件，用户可以点击预览
+Sign where needed; your signature appears in the generated PDF.
 
-  * **图片**（jpg/png 等）直接在界面以缩略 /弹窗展示
-  * **PDF / OFD / 文档**：在界面嵌入或调用内部预览器（如 PDF.js、OFD 阅读器或第三方库）进行翻页 / 缩放
-  * 若某种格式暂时不能直接预览（如 OFD 在部分平台未被支持），应提供“打开本地文件”按钮（调用系统默认程序打开）
-* 支持在预览界面对图片做旋转、裁剪、缩放、翻转等基础操作（可选 / 后期扩展）
+![Generated Document PDF](./docs/10.generatedDocumentPDF.jpg)
 
-#### 4.3.3 水印 / 文字标注
+### 11. Preview and edit images before watermarking
 
-* 对于某些条目（在模板中勾选“需要水印”）：
+You can preview and make light edits before adding the watermark. Note: for Chinese text, change the font because the default Arial does not support CJK.
 
-  * 在关联或提交时，自动对用户上传的图片 / PDF 插入水印文字或标识
-  * 水印内容可根据模板 /条目的设定规则生成（支持变量占位符，例如 `{用户名}`、`{条目名}`、`{项目名}`、`{日期}` 等）
-  * 水印位置 /字体 /透明度 /旋转角度等可在模板层设定（若模板里没有设定就用默认值）
-* 如果上传的是图片（png/jpg），直接在图片上插入文字（覆盖 / 在底层 /半透明）
-* 如果上传的是 PDF / 多页文档 /扫描件，则在每页上插入水印文字（或图像水印）
-* 在预览界面，用户可以查看带水印后的效果（在 UI 层显示水印后的版本）
+![Add Watermark](./docs/11.addWatermark.jpg)
 
-#### 4.3.4 文件替换 / 删除 / 重命名
+### 12. Or configure watermark styles in Settings
 
-* 用户可以替换已绑定的文件（重新上传）
-* 可以删除某个条目下某个文件
-* 支持给文件 /条目重命名 /备注（如区分多张图片）
+Adjust watermark text, placement, opacity, and more in Settings.
 
-#### 4.3.5 条目状态 / 完成度标识
+![Watermark Settings](./docs/12.watermarkSettings.jpg)
 
-* 每个条目应有状态标识（如“未上传 / 待处理 / 已上传 / 已加水印 / 审核通过”等）
-* 系统应校验“必填条目”是否都已上传 / 有效，若有缺失则在实例整体状态上给出警示
-* 可以给条目打标签 /备注（如“报销凭证已确认”）
+### 13. Track project progress continuously
 
-#### 4.3.6 模板化文档填写
+Monitor overall progress and see what remains.
 
-* 适用场景：在报销过程中，需要提交由个人手写或文字填充的声明 / 证明类材料（如“未使用公务卡声明”等）。
-* 功能目标：在项目的某个条目下，基于预置的“声明/证明文档模板”，引导用户填写必要信息，实时预览替换效果，并一键生成 PDF 作为该条目的附件。
-* 基本流程：
-  * 在条目操作中选择“从文档模板添加”。
-  * 选择一份声明 / 证明类模板（模板为富文本，包含可替换占位符，例如 `{userName}`、`{studentId}`、`{projectName}`、`{date}` 等）。
-  * 在界面中填写各占位符对应的值，所见即所得地查看预览。
-  * 确认后生成 PDF，并自动作为该条目的附件保存，后续可与其他材料统一进行预览 / 打包 / 打印。
-* 示例（内容示意，具体模板可在系统中维护）：
-  > 本人 ______ 是______在读 ______ 研究生，学号 ______ 。无公务卡，因 ______ ，支出住宿及交通费共 ______ 元，未使用公务卡刷卡消费，请财务给予报销。
-  > 本人承诺所提供的信息真实可靠。
-  > 特此证明！
-  > 
-  > 经费负责人签名：
-  > 
-  > 本人签名：
-  > 时间：{date}
-* 校验与提示：
-  * 对未填写的必填项给出提示；支持配置“需全部填写后才可生成”或“未填写处保留占位符”的策略。
-  * 可从项目元信息 / 用户偏好中自动带入默认值（如默认用户名、学号、当前日期等），减少重复输入。
-* 一致性与记录：
-  * 生成的声明文档与对应项目 / 条目绑定，保留生成时间、创建者等元信息，便于校验与追溯。
-* 导出 / 打印：
-  * 与其他附件一致，支持参与合成预览、导出包与打印流程。
+![Project Tracking](./docs/13.projectTracking.jpg)
 
-### 4.4 预览 / 审核 / 合并
+### 14. Quickly filter a set of pending files in the project editor
 
-* 用户可以在某报销实例里预览一个 “合成视图” —— 将所有条目内容以报销书 / 材料清单形式展示在一个页面 / 多页视图中
-* 在合成预览中，展示：
+Use filters to focus on what still needs attention.
 
-  * 报销项目元信息（项目名 / 创建者 /时间 /可选字段等）
-  * 各条目名称 + 描述
-  * 对应已上传文件的缩略 /预览
-  * 对于带水印 /标注的条目，展示最终效果
-* 用户可在预览中跳转到某条目 /查看原始文件 /修改
-* 在预览视图中，用户可选择导出 /打印 /打包整个项目
+![Filter Items](./docs/14.filterItems.jpg)
 
-### 4.5 导出 / 打包 / 打印
+### 15. All files are ready — export a combined PDF for printing, or package for finance
 
-#### 4.5.1 导出为 PDF / 打包
+Once everything is ready, export a single PDF or bundle files for submission.
 
-* 用户可以将某个报销实例导出为一个整合的报销材料包：**ZIP /压缩包结构**：包含单独的文件（如每个条目上传的附件、加水印后的版本、一个用于总览的 PDF）和一个描述文件（如 JSON / manifest / 索引 /封面）
+![Ready to Print / Export](./docs/15.readyToPrint.jpg)
 
-* 导出过程要考虑路径、文件名冲突、异常处理（如文件失效、读写错误等）
+### 16. Print the combined PDF directly
 
-* 对于被导出的材料包，要支持在另一个安装该软件的设备 /用户处导入（见下节导入功能）
+Open the merged PDF and click the top-right Print button to connect to your printer.
 
-#### 4.5.2 打印功能
+![Everything in One PDF](./docs/16.everythingInOne.jpg)
 
-* 打印整个项目里可以打印的所有内容（图片、pdf等，默认带水印）
-* 打印选项支持：纸张大小、页边距、单双面、横竖打印等
-* 在打印前，可以让用户预览分页 /打印页样式
+### 17. Export all project files
 
-#### 4.5.3 导出 / 引入给他人
+Export everything for archiving or sharing.
 
-* 导出的报销包要带有足够的结构 / 元信息 /附件，使得另一个用户导入后能够恢复为一个完整的报销实例
-* 导入功能应支持：
+![Export Project](./docs/17.exportProject.jpg)
 
-  * 选择一个导出包（ZIP 或结构化格式）
-  * 校验包格式有效性、版本兼容性
-  * 在当前软件中创建新的实例，填充元信息 + 各条目 + 附件 + 预处理（如已带水印的文件直接使用）
-  * 若导入的实例与已有实例冲突（如同名），要提示用户重命名 /跳过 /覆盖
+### 18. UnionReim also supports Chinese and a light theme
 
-### 4.6 数据存储 / 本地数据库 /文件管理
+Switch language and theme as you prefer.
 
-* 使用 SQLite（或兼容）作为本地数据库，维护以下核心数据表（建议结构草稿）：
+![Chinese and Light Theme](./docs/18.alsoInChineseAndLightTheme.jpg)
 
-  | 表 / 实体             | 主要字段示例                                                                                                                       | 说明           |
-  | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------ |
-  | Template           | template_id, name, description, create_time, update_time, 默认设置 JSON 等                                                        | 存储模板的元信息与配置  |
-  | Template_Item      | item_id, template_id (FK), name, description, order, 必填, 支持文件类型, 是否水印, 水印模板, 是否多文件, 设置 JSON 等                                | 每个模板关联的条目定义  |
-  | Project | project_id, template_id, name, creator, create_time, update_time, 元信息(JSON / 字段列), 状态                                        | 存储每个报销实例的元信息 |
-  | Project_Item       | project_item_id, project_id, template_item_id (FK), status, 上传时间, 备注等                                                        | 实例中每个条目的状态记录 |
-  | Attachment / File  | attachment_id, project_item_id, file_path (本地路径), file_name, file_type, upload_time, watermarked_flag（是否已加水印）, metadata JSON | 每个上传的文件记录    |
 
-* 在文件系统层面，需要一个有组织的目录结构，用于存放用户上传的附件 /水印版本 /导出材料包等。可以采用类似下列结构：
+## Use It for Anything Structured
 
-  ```
-  storage/
-    templates/            # 可选，若模板有自定义资产
-    projects/
-      <project_id>/
-        metadata.json
-        items/
-          <project_item_id>/
-            original/
-              file1.pdf
-              file2.jpg
-            watermarked/
-              file1_wm.pdf
-              file2_wm.jpg
-        export/
-          attachments.zip
-          manifest.json
-  ```
+Use UnionReim to manage any structured text workflows beyond reimbursements, including awards, publications, and more.
 
-* 在操作文件（写、读、删除）时，要确保路径安全、异常捕获、空间 /权限校验
 
-### 4.7 导入 / 导出 / 迁移
+## Getting Started
 
-* 软件支持导入他人导出的报销包（见 4.5.3）
-* 支持导出 /导入 **模板定义**（模板可以被导出为 JSON + 附助文件），便于在不同环境共享模板
-* 在导入过程中要校验版本兼容性、冲突处理
+1. Create or import a template for your use case
+2. Define template strings (e.g., `userName`, `studentID`) and defaults
+3. Upload files and documents; enable Auto Watermark if needed
+4. Preview, edit lightly, and generate PDFs
+5. Track progress and export when ready
 
-### 4.8 用户界面 / 用户体验（UI/UX）
 
-* 整体界面风格保持简洁、直观、模块清晰
-* 在条目状态、必填项缺失时给出明确提示、红色警示 / 图标
-* 拖拽上传应有拖拽高亮反馈
-* 文件上传 /处理 /导入 / 导出 /水印等异步操作应有进度指示 / loading 状态
-* 操作成功 /失败要有提示 / 弹窗反馈
-* 支持撤销 / 重做（部分操作，如替换文件、删除）是加分项
-* 支持窗口大小自适应 / 响应式布局
-* 在导出 / 打印界面给用户一个分页 /缩略预览，便于确认格式
-* 在列表 /浏览界面支持排序 /筛选 /搜索（模板 /实例 /附件等）
+## License
 
-### 4.9 权限 /安全 /稳定性
-
-* 避免渲染进程执行高权限文件操作，所有文件读写应通过主进程 API
-* 在导入 / 导出过程中对不合法 /恶意格式做防护
-* 对数据库操作／文件操作要有事务 /回滚 /错误捕获防止数据损坏
-* 对重要操作（如导出 / 覆盖 / 删除项目）做确认提示
-* 若文件过大 /报销项目条目太多时，注意内存 /性能，必要时分批操作 /流式处理
-
----
-
-## 五、非功能需求 / 额外要求
-
-* **跨平台支持**： 应支持 Windows / macOS / Linux 三大平台
-* **性能**： 对常规规模报销项目（几十个材料、百兆以内附件）导入 /导出 /生成应在可接受时间（如 <10 秒）内完成
-* **可扩展性 / 插件支持**： 未来可以考虑接入 OCR（识别发票字段）、云同步 / 备份、网络接口等
-* **国际化 / 本地化**（可选）： 若适用，可支持中 / 英界面切换
-* **更新机制**： 支持自动更新 /热更新机制
-* **日志 / 错误追踪**： 应记录关键操作日志 & 错误日志，便于调试与客户支持
-
----
-
-## 六、用例 / 典型流程
-
-下面列几个典型的用户用例，以明确流程和界面链路。
-
-### 用例 1：创建一个模板 “会议报销”
-
-1. 用户点击 “新建模板”
-2. 输入模板名称 = “会议报销”，（可填描述字段）
-3. 系统进入模板编辑界面
-4. 用户添加条目 “会议邀请函”（必填、单文件、不打水印）
-5. 添加条目 “住宿发票”（必填、单文件、打水印）
-6. 添加条目 “住宿水单”（非必填、单文件、可不打水印）
-7. 添加条目 “来回交通发票”（必填、多文件、打水印）
-8. 添加条目 “支付记录截图”（必填、多文件、打水印，水印文本模板可设置为 `{用户名} {条目名}`）
-9. 保存模板
-10. 模板被列入模板列表
-
-### 用例 2：实例化模板 → 填写材料 → 导出
-
-1. 在模板列表中，点击 “基于模板新建项目”
-2. 选择 “会议报销”模板，输入实例名 = “2025 ISICDM 会议报销”
-3. 系统生成该项目的条目列表，显示 “会议邀请函”、“住宿发票” 等条目，状态均为 “未上传”
-4. 用户拖拽一张 PDF 到 “会议邀请函”条目上，系统校验格式，保存关联
-5. 用户上传 “住宿发票”（图片 / PDF），系统为其插入水印，状态变为 “已上传 /已加水印”
-6. 用户上传 “支付记录截图” 多张截图，系统对每张加水印，状态更新
-7. 用户点击 “预览” 按钮，界面显示报销封面 + 各条目及其材料预览
-8. 用户点击 “打包” → 系统生成附件压缩包
-9. 导出成功后，用户可以下载 /保存 /打印
-
-### 用例 3：导入别人导出的报销包
-
-1. 在软件中点击 “导入项目”
-2. 选择一个 zip / 导出包文件
-3. 软件校验包格式、版本
-4. 创建新的报销实例，填充元信息 + 各条目 + 附件 + 水印文件
-5. 导入成功后，用户可以像本地项目那样浏览 / 修改 /导出
-
----
-
-## 七、接口 & 数据协议建议（简略）
-
-为了后端 / 主进程 & 前端之间通信清晰，你可以定义一组 IPC / API 接口：
-
-| 通信方向     | 接口名 / 通道             | 参数 / 输入                                 | 返回值 / 输出             | 描述            |
-| -------- | -------------------- | --------------------------------------- | -------------------- | ------------- |
-| 渲染 → 主进程 | `template.create`    | 模板名称 + 描述 + 初始条目列表                      | 新模板 ID / 成功 /失败      | 创建模板          |
-| 渲染 → 主进程 | `template.list`      | 过滤 /分页参数                                | 模板列表                 | 获取模板列表        |
-| 渲染 → 主进程 | `template.get`       | template_id                             | 模板详细定义               | 获取某模板条目定义     |
-| 渲染 → 主进程 | `template.update`    | template_id + 修改内容                      | 成功 /失败               | 编辑模板          |
-| 渲染 → 主进程 | `project.create`     | template_id + 项目名称 +元信息                 | 新 project_id         | 创建实例          |
-| 渲染 → 主进程 | `project.list`       | 过滤 /分页 /状态                              | 项目摘要列表               | 列出所有实例        |
-| 渲染 → 主进程 | `project.get`        | project_id                              | 项目元信息 +条目列表 +文件状态    | 获取实例详情        |
-| 渲染 → 主进程 | `attachment.upload`  | project_id + project_item_id + 文件数据 /路径 | attachment_id / 成功标志 | 上传 / 关联文件     |
-| 渲染 → 主进程 | `attachment.delete`  | attachment_id                           | 成功 /失败               | 删除文件关联        |
-| 渲染 → 主进程 | `attachment.preview` | attachment_id                           | 文件流 / buffer /路径     | 获取文件用于预览      |
-| 渲染 → 主进程 | `process.watermark`  | attachment_id / project_item_id         | 处理后文件 buffer /路径     | 对单个文件做水印 / 标注 |
-| 渲染 → 主进程 | `project.export`     | project_id + 导出选项                       | 导出包 buffer /路径       | 导出整个项目        |
-| 渲染 → 主进程 | `project.print`      | project_id + 打印选项                       | 成功 /失败               | 打印合成材料        |
-| 渲染 → 主进程 | `project.import`     | 导出包 buffer /路径                          | 新 project_id /成功 /失败 | 导入项目包         |
-| 渲染 → 主进程 | `template.export`    | template_id                             | 模板定义包 / JSON         | 导出模板定义        |
-| 渲染 → 主进程 | `template.import`    | 模板定义包 /JSON                             | 新 template_id / 成功   | 导入模板定义        |
-
-此外，对于状态变化 /长操作（如导出 /水印处理）可以考虑 `IPC` 推送 / 事件通知，以便渲染层显示进度条 /状态更新。
-
----
-
-## 八、优先级 & 里程碑建议（MVP 阶段划分）
-
-在开始开发时，建议分阶段推进 MVP（最小可行产品），以下是一个建议的阶段划分与优先级：
-
-| 版本 /阶段 | 目标功能覆盖                             | 可交付成果 / 验收标准                                |
-| ------ | ---------------------------------- | ------------------------------------------- |
-| 阶段 1   | 基础模板管理 + 实例创建 + 条目上传 + 图片 / PDF 预览 | 能创建模板、实例，上传图片 / PDF 并在界面显示，基本流程通畅           |
-| 阶段 2   | 水印处理 + 合成预览           | 上传的文件可加水印（图片 /PDF），可在界面预览所有文件   |
-| 阶段 3   | 打包 / 导出 ZIP 包 + 导入功能               | 能把整个项目打包为压缩包 / 包含附件 / 元信息；支持导入包恢复项目         |
-| 阶段 4   | 打印功能 + UI 优化 + 异常处理                | 在应用内部可以直接打印；界面友好交互完善；错误 /边界情况处理稳健           |
-| 阶段 5   | 模板导出 /导入 + 多用户 /协作优化 + 扩展性         | 模板可以在用户间迁移；用户协作 /角色权限机制（可选）；为后续 OCR /云同步留接口 |
-
-你可以根据团队人力 /时间安排，灵活调整这些阶段划分。
-
----
-
-## 九、后续扩展 / 可选功能建议
-
-以下是未来可以考虑加入的增强功能，有的也可以提前设计好架构以备扩展：
-
-1. **OCR / 发票识别**
-   自动识别上传发票或支付截图中的文字（日期、金额、发票号、商家名等），自动填充条目元字段
-2. **自动匹配 / 校验**
-   若在系统中已有历史记录，可以做重复校验 /自动关联 /智能匹配
-3. **云同步 / 备份**
-   把报销项目 /模板同步到云端（如你的自建后端 /第三方存储），实现跨设备访问 /多用户协作
-4. **多语言 / 国际化（I18n）**
-   支持中英文切换、国际格式（日期 /货币格式等）
-5. **模板市场 /共享**
-   用户可以上传 / 下载别人分享的模板，用于不同报销场景
-6. **通知 / 提醒 /状态跟踪**
-   对于未完成项目 /逾期项目给予提醒 /通知
-7. **版本 /历史记录 /回滚**
-   对项目 /条目修改做版本记录，用户可回溯 /撤销
-8. **插件 /脚本扩展**
-   允许用户自定义模板插件 /钩子 /脚本（例如自定义水印规则，或生成自定义报表）
-
----
-
-## 十、发布与自动构建（CI/CD 简述）
-
-本仓库已配置跨平台自动发布工作流（GitHub Actions）：
-
-- 触发方式：推送任意 tag（推荐语义化版本，如 `v1.0.0`）或手动触发工作流。
-- 流程：
-  - 使用 Node 20 安装依赖并构建（Vite）
-  - 按操作系统矩阵（Windows、macOS、Linux）进行打包
-  - 使用内置 `GITHUB_TOKEN` 自动发布到 GitHub Releases
-- 版本号：CI 会将 tag 去掉前缀 `v` 后传入 `VITE_APP_VERSION`，用于构建产物版本。
-- 产物命名：`${productName}-${version}-${os}-${arch}.${ext}`，方便多平台分发。
-
-本地调试打包：
-
-```bash
-npm run build
-npm run package
-```
-
-正式发布（自动构建并发布 Release）：
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+This project is licensed under the MIT License.

@@ -39,7 +39,7 @@ export default {
     loadingOne: "Loading document...",
     nameRequired: "Name is required",
     placeholdersTip: "Supported placeholders: {list}",
-    generateAndUploadPdf: "Generate and Upload PDF",
+    generateAndUploadPdf: "Generate PDF",
     selectTemplate: "Select Template",
     fromTemplateTitle: "Generate Document from Template",
   },
