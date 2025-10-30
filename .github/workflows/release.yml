@@ -1,5 +1,8 @@
 name: Release
 
+permissions:
+  contents: write
+
 on:
     push:
         tags:
@@ -7,6 +10,19 @@ on:
     workflow_dispatch:
 
 jobs:
+    create-release:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+          - name: Create release
+            uses: softprops/action-gh-release@v2
+            with:
+                tag_name: ${{ github.ref_name }}
+                name: ${{ github.ref_name }}
+                token: ${{ secrets.GITHUB_TOKEN }}
+                draft: false
+                prerelease: false
+
     release:
         strategy:
             matrix:
@@ -14,6 +30,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         name: Release
         environment: release
+        needs: create-release
         steps:
             - name: Checkout current commit/branch/tag
               uses: actions/checkout@v4
