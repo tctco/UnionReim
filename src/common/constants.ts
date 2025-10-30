@@ -26,7 +26,7 @@ export const DEFAULT_WATERMARK_SETTINGS: WatermarkSettings = {
     italic: false,
     underline: false,
     color: "#000000",
-    opacity: 0.3,
+    opacity: 0.5,
     rotation: -45,
     xPercent: 50,
     yPercent: 50,

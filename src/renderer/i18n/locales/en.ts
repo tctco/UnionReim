@@ -106,6 +106,7 @@ export default {
     storageRootLabel: "Default storage path",
     autoWatermarkLabel: "Auto watermark images on upload",
     autoWatermarkHelp: "When enabled, image files ({exts}) will be watermarked automatically upon upload, using current watermark settings.",
+    targetDirNotEmpty: "Target directory must be empty",
   },
   previewSettings: {
     widthLabel: "Preview width (px)",

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         selectDirectory: () => ipcRenderer.invoke('system:selectDirectory'),
         resolveStoragePath: (relative: string) => ipcRenderer.invoke('system:resolveStoragePath', relative),
         openPath: (absPath: string) => ipcRenderer.invoke('system:openPath', absPath),
+        isDirectoryEmpty: (absPath: string) => ipcRenderer.invoke('system:isDirectoryEmpty', absPath),
     },
 
     // Template operations

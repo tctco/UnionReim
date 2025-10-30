@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { DatabaseService } from "../database/Database";
 import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 import type { AppSettings, WatermarkSettings } from "@common/types";
-import { DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM } from "@common/constants";
+import { DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM, DEFAULT_WATERMARK_SETTINGS } from "@common/constants";
 import { basename, extname, join } from "path";
 import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "fs";
 
@@ -26,19 +26,7 @@ export class SettingsService {
             defaultStoragePath: DEFAULT_STORAGE_PATH,
             signatureImageHeightCm: DEFAULT_SIGNATURE_IMAGE_HEIGHT_CM,
             // optional: defaultUserName, studentId, signatureImagePath are not set here
-            watermark: {
-                textMode: 'template',
-                fontFamily: 'Arial',
-                fontSize: 48,
-                bold: false,
-                italic: false,
-                underline: false,
-                color: '#000000',
-                opacity: 0.3,
-                rotation: -45,
-                xPercent: 50,
-                yPercent: 50,
-            },
+            watermark: DEFAULT_WATERMARK_SETTINGS,
         };
 
         for (const [key, value] of Object.entries(defaults)) {

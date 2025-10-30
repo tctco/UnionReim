@@ -4,12 +4,13 @@ on:
     push:
         tags:
             - "*"
+    workflow_dispatch:
 
 jobs:
     release:
         strategy:
             matrix:
-                os: [macos-13, macos-14, windows-2022, ubuntu-22.04]
+                os: [macos-latest, windows-latest, ubuntu-latest]
         runs-on: ${{ matrix.os }}
         name: Release
         environment: release
@@ -21,9 +22,10 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 20
+                  cache: npm
 
             - name: Install npm dependencies
-              run: npm install
+              run: npm ci
               env:
                   NODE_ENV: development
 
@@ -41,8 +43,16 @@ jobs:
               env:
                   NODE_ENV: production
 
+            - name: Derive VITE_APP_VERSION from tag (strip leading 'v')
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const ref = process.env.GITHUB_REF_NAME || '';
+                      const ver = ref.startsWith('v') ? ref.slice(1) : ref;
+                      core.exportVariable('VITE_APP_VERSION', ver);
+
             - name: Package and publish
               run: npm run package:publish
               env:
                   CI: true
-                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

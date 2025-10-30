@@ -36,7 +36,7 @@ export class AttachmentService {
         const project_id = projectItem.project_id;
 
         // Create directory structure: storage/projects/<project_id>/items/<item_id>/original/
-        const itemStoragePath = join(this.storagePath, String(project_id), "items", String(project_item_id), "original");
+        const itemStoragePath = join(this.getStoragePath(), String(project_id), "items", String(project_item_id), "original");
         if (!existsSync(itemStoragePath)) {
             mkdirSync(itemStoragePath, { recursive: true });
         }
@@ -106,7 +106,7 @@ export class AttachmentService {
         const project_id = projectItem.project_id;
 
         // Ensure item storage directory exists
-        const itemStoragePath = join(this.storagePath, String(project_id), "items", String(project_item_id), "original");
+        const itemStoragePath = join(this.getStoragePath(), String(project_id), "items", String(project_item_id), "original");
         if (!existsSync(itemStoragePath)) {
             mkdirSync(itemStoragePath, { recursive: true });
         }
@@ -270,13 +270,13 @@ export class AttachmentService {
 
         return DatabaseService.getInstance().transaction(() => {
             // Delete files from filesystem
-            const originalPath = join(this.storagePath, attachment.file_path);
+            const originalPath = join(this.getStoragePath(), attachment.file_path);
             if (existsSync(originalPath)) {
                 unlinkSync(originalPath);
             }
 
             if (attachment.watermarked_path) {
-                const watermarkedPath = join(this.storagePath, attachment.watermarked_path);
+                const watermarkedPath = join(this.getStoragePath(), attachment.watermarked_path);
                 if (existsSync(watermarkedPath)) {
                     unlinkSync(watermarkedPath);
                 }
@@ -309,7 +309,7 @@ export class AttachmentService {
 
         const path = use_watermarked && attachment.watermarked_path ? attachment.watermarked_path : attachment.file_path;
 
-        return join(this.storagePath, path);
+        return join(this.getStoragePath(), path);
     }
 
     // Update watermarked path
@@ -343,9 +343,9 @@ export class AttachmentService {
 
         // Remove watermarked file from disk if present
         if (attachment.watermarked_path) {
-            const abs = join(this.storagePath, attachment.watermarked_path);
+            const abs = join(this.getStoragePath(), attachment.watermarked_path);
             if (existsSync(abs)) {
-                try { unlinkSync(abs); } catch {}
+                try { unlinkSync(abs); } catch { /* ignore unlink errors */ }
             }
         }
 
@@ -389,7 +389,7 @@ export class AttachmentService {
         if (!newRoot || newRoot === currentRoot) return true;
 
         // Ensure parent directory exists
-        try { mkdirSync(dirname(newRoot), { recursive: true }); } catch {}
+        try { mkdirSync(dirname(newRoot), { recursive: true }); } catch { /* ignore mkdir errors */ }
 
         // If target does not exist, try rename for efficiency
         const performCopyRecursive = () => {
@@ -409,7 +409,7 @@ export class AttachmentService {
             };
             copyDir(currentRoot, newRoot);
             // Remove old directory tree
-            try { rmSync(currentRoot, { recursive: true, force: true }); } catch {}
+            try { rmSync(currentRoot, { recursive: true, force: true }); } catch { /* ignore removal errors */ }
         };
 
         if (!existsSync(newRoot)) {
@@ -448,7 +448,7 @@ export class AttachmentService {
         const attachment = this.getAttachment(attachment_id);
         if (!attachment) return null;
 
-        const oldAbsPath = join(this.storagePath, attachment.file_path);
+        const oldAbsPath = join(this.getStoragePath(), attachment.file_path);
         const directoryPath = dirname(oldAbsPath);
 
         const ext = extname(attachment.file_name) || (attachment.file_type ? `.${attachment.file_type}` : "");
@@ -476,7 +476,7 @@ export class AttachmentService {
         // If a watermarked file exists, rename it to keep base name consistent
         let newWatermarkedRelativePath: string | undefined = undefined;
         if (attachment.watermarked_path) {
-            const oldWaterAbs = join(this.storagePath, attachment.watermarked_path);
+            const oldWaterAbs = join(this.getStoragePath(), attachment.watermarked_path);
             if (existsSync(oldWaterAbs)) {
                 const waterDir = dirname(oldWaterAbs);
                 const waterExt = extname(oldWaterAbs) || ".png";
@@ -488,7 +488,7 @@ export class AttachmentService {
                     wcounter += 1;
                 }
                 const newWaterAbs = join(waterDir, waterCandidate);
-                try { renameSync(oldWaterAbs, newWaterAbs); } catch {}
+                try { renameSync(oldWaterAbs, newWaterAbs); } catch { /* ignore rename errors */ }
 
                 // Build watermarked relative path from storage root
                 const waterRelDirFromStorage = dirname(attachment.watermarked_path);

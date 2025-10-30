@@ -2,6 +2,7 @@ import { WATERMARK_IMAGE_EXTS } from "@common/constants";
 import { Button, Field, InfoLabel, Input, Switch } from "@fluentui/react-components";
 import { Folder24Regular } from "@fluentui/react-icons";
 import { useI18n } from "../../i18n";
+import { useToastHandler } from "../../utils/toastHelpers";
 
 export default function PreferenceSettingsPanel(props: {
     defaultStoragePath?: string;
@@ -10,11 +11,29 @@ export default function PreferenceSettingsPanel(props: {
 }) {
     const { defaultStoragePath, autoWatermarkImages = false, onChange } = props;
     const { t } = useI18n();
+    const showError = useToastHandler({ errorTitle: t("toast.operationFailed") });
 
     const handleBrowse = async () => {
         try {
             const res = await window.ContextBridge.system.selectDirectory();
             if (res.success && res.data) {
+                // Reject non-empty directories
+                try {
+                    const emptyRes = await window.ContextBridge.system.isDirectoryEmpty(res.data);
+                    const isEmpty = !!(emptyRes && emptyRes.success ? emptyRes.data : emptyRes);
+                    if (!isEmpty) {
+                        await showError(async () => {
+                            throw new Error(t("preferences.targetDirNotEmpty") || "Target directory must be empty");
+                        });
+                        return;
+                    }
+                } catch {
+                    // If we cannot validate, be conservative and block
+                    await showError(async () => {
+                        throw new Error(t("preferences.targetDirNotEmpty") || "Target directory must be empty");
+                    });
+                    return;
+                }
                 onChange({ defaultStoragePath: res.data });
             }
         } catch (e) {

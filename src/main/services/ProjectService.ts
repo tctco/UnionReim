@@ -10,16 +10,25 @@ import type Database from "better-sqlite3";
 import { DatabaseService } from "../database/Database";
 import { AttachmentService } from "./AttachmentService";
 import { TemplateService } from "./TemplateService";
+import { existsSync, rmSync } from "fs";
+import { join } from "path";
+import { SettingsService } from "./SettingsService";
+import { DEFAULT_STORAGE_PATH } from "../electronConfigs";
 
 export class ProjectService {
     private db: Database.Database;
     private templateService: TemplateService;
     private attachmentService: AttachmentService;
+    private settingsService: SettingsService;
+    private storagePath: string;
 
     constructor() {
         this.db = DatabaseService.getInstance().getDatabase();
         this.templateService = new TemplateService();
         this.attachmentService = new AttachmentService();
+        this.settingsService = new SettingsService();
+        const configured = this.settingsService.getDefaultStoragePath();
+        this.storagePath = configured || DEFAULT_STORAGE_PATH;
     }
 
     // Project operations
@@ -165,6 +174,12 @@ export class ProjectService {
                 for (const attachment of attachments) {
                     this.attachmentService.deleteAttachment(attachment.attachment_id);
                 }
+            }
+
+            // Delete the entire project folder from storage
+            const projectDir = join(this.storagePath, String(project_id));
+            if (existsSync(projectDir)) {
+                rmSync(projectDir, { recursive: true, force: true });
             }
 
             // Delete the project (CASCADE will handle project_items)

@@ -115,7 +115,7 @@ export class DatabaseService {
 
     private constructor() {
         const userDataPath = app.getPath("userData");
-        const dbPath = join(userDataPath, "reimbursement.db");
+        const dbPath = join(userDataPath, "UnionReim.db");
 
         this.db = new Database(dbPath);
         this.db.pragma("foreign_keys = ON");

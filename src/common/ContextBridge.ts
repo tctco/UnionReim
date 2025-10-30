@@ -122,6 +122,7 @@ export type ContextBridge = {
         selectDirectory: () => Promise<ApiResponse<string | null>>;
         resolveStoragePath: (relative: string) => Promise<ApiResponse<string>>;
         openPath: (absPath: string) => Promise<ApiResponse<boolean>>;
+        isDirectoryEmpty: (absPath: string) => Promise<ApiResponse<boolean>>;
     };
 
     // Document template operations

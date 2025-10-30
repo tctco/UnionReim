@@ -3,17 +3,26 @@
  * @see https://www.electron.build/configuration/configuration
  */
 const baseConfig = {
-    appId: "com.electron.fluentui",
-    productName: "Electron Fluent UI",
+    appId: "com.unionreim.app",
+    productName: "UnionReim",
     directories: {
         output: "release",
         buildResources: "build",
     },
     files: ["dist-main/index.js", "dist-preload/index.js", "dist-renderer/**/*"],
+    artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
+    publish: [{ provider: "github" }],
     extraMetadata: {
-        version: process.env.VITE_APP_VERSION,
+        "chromium-ffmpeg": false
     },
 };
+
+// Inject version from CI tag or npm package metadata when available
+if (process.env.VITE_APP_VERSION) {
+    baseConfig.extraMetadata.version = process.env.VITE_APP_VERSION;
+} else if (process.env.npm_package_version) {
+    baseConfig.extraMetadata.version = process.env.npm_package_version;
+}
 
 /**
  * @type {Record<NodeJS.Platform, import('electron-builder').Configuration>}
@@ -21,26 +30,29 @@ const baseConfig = {
 const platformSpecificConfigurations = {
     darwin: {
         ...baseConfig,
-        afterPack: "./build/macos/codeSign.mjs",
+        // Remove code signing hook by default to avoid CI failures when no signing is configured
         mac: {
             icon: "build/logo-img.png",
             target: [{ target: "dmg" }, { target: "zip" }],
+            category: "public.app-category.utilities",
         },
     },
     win32: {
         ...baseConfig,
-        appx: {
-            applicationId: "OliverSchwendener.ElectronFluentUI",
-            backgroundColor: "#1F1F1F",
-            displayName: "Electron Fluent UI",
-            identityName: "1915OliverSchwendener.ElectronFluentUI",
-            publisher: "CN=AD6BF16D-50E3-4FD4-B769-78A606AFF75E",
-            publisherDisplayName: "Oliver Schwendener",
-            languages: ["en-US"],
-        },
         win: {
             icon: "build/logo-img.png",
-            target: [{ target: "msi" }, { target: "nsis" }, { target: "zip" }, { target: "appx" }],
+            target: [{ target: "nsis" }, { target: "msi" }, { target: "zip" }],
+        },
+        appx: {
+            // Display name shown in Microsoft Store contexts
+            publisherDisplayName: "tctco",
+            // Supported languages
+            languages: ["en-US", "zh-CN"],
+        },
+        nsis: {
+            oneClick: false,
+            perMachine: false,
+            allowToChangeInstallationDirectory: true,
         },
     },
     linux: {

@@ -106,6 +106,7 @@ export default {
     storageRootLabel: "默认存储路径",
     autoWatermarkLabel: "上传图片时自动加水印",
     autoWatermarkHelp: "开启后，上传图片文件（{exts}）将自动按当前水印设置加水印，无需手动操作。",
+    targetDirNotEmpty: "目标目录必须为空",
   },
   previewSettings: {
     widthLabel: "预览宽度（px）",

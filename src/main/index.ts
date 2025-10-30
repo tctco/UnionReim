@@ -24,14 +24,15 @@ const createBrowserWindow = (): BrowserWindow => {
 
     return new BrowserWindow({
         autoHideMenuBar: true,
-        backgroundMaterial: "mica",
-        vibrancy: "header",
+        // backgroundMaterial: "mica", // only available on Win11
+        // vibrancy: "header",
+        backgroundColor: "#ffffff", // required for Win10
         width: 1280,
         height: 800,
         webPreferences: {
             preload: preloadScriptFilePath,
         },
-        icon: join(__dirname, "..", "build", "app-icon-dark.png"),
+        icon: join(__dirname, "..", "build", "logo-img.png"),
     });
 };
 

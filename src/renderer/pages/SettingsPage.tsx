@@ -1,24 +1,24 @@
+import type { AppSettings, WatermarkSettings } from "@common/types";
 import {
-    Button,
     Accordion,
-    AccordionItem,
     AccordionHeader,
+    AccordionItem,
     AccordionPanel,
+    Button,
     makeStyles,
-    tokens,
     Title3,
+    tokens,
 } from "@fluentui/react-components";
 import { LocalLanguage16Regular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
-import { useSaveHandler } from "../utils/toastHelpers";
-import type { AppSettings, WatermarkSettings } from "@common/types";
-import WatermarkSettingsPanel from "../components/Settings/WatermarkSettingsPanel";
-import UserSettingsPanel from "../components/Settings/UserSettingsPanel";
-import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPanel";
-import PreferenceSettingsPanel from "../components/Settings/PreferenceSettingsPanel";
 import { ConfirmDialog } from "../components/Common/ConfirmDialog";
+import AppearanceSettingsPanel from "../components/Settings/AppearanceSettingsPanel";
 import LanguageSettingsPanel from "../components/Settings/LanguageSettingsPanel";
+import PreferenceSettingsPanel from "../components/Settings/PreferenceSettingsPanel";
+import UserSettingsPanel from "../components/Settings/UserSettingsPanel";
+import WatermarkSettingsPanel from "../components/Settings/WatermarkSettingsPanel";
 import { useI18n } from "../i18n";
+import { useSaveHandler } from "../utils/toastHelpers";
 // (local hsv type is defined inside ColorPickerPopover)
 
 const useStyles = makeStyles({
@@ -144,7 +144,7 @@ export function SettingsPage() {
                 settings: formData,
             });
         });
-        
+
         if (result) {
             setSettings(result);
         }
@@ -283,22 +283,14 @@ export function SettingsPage() {
                     }
                 }}
             />
-            
+
             <div className={styles.header}>
                 <Title3>{t("settings.title")}</Title3>
                 <div style={{ display: "flex", gap: "8px" }}>
-                    <Button 
-                        appearance="secondary" 
-                        onClick={handleReset}
-                        disabled={!hasChanges || saving}
-                    >
+                    <Button appearance="secondary" onClick={handleReset} disabled={!hasChanges || saving}>
                         {t("settings.resetBtn")}
                     </Button>
-                    <Button 
-                        appearance="primary" 
-                        onClick={handleSave}
-                        disabled={!hasChanges || saving}
-                    >
+                    <Button appearance="primary" onClick={handleSave} disabled={!hasChanges || saving}>
                         {saving ? t("settings.saving") : t("settings.saveBtn")}
                     </Button>
                 </div>
@@ -306,83 +298,79 @@ export function SettingsPage() {
 
             <Accordion multiple collapsible defaultOpenItems={["user"]}>
                 <AccordionItem value="user">
-                    <AccordionHeader>
-                        {t("settings.userSettings")}
-                    </AccordionHeader>
+                    <AccordionHeader>{t("settings.userSettings")}</AccordionHeader>
                     <AccordionPanel>
-                    <UserSettingsPanel
-                        defaultUserName={formData.defaultUserName}
-                        studentId={formData.studentId}
-                        signatureImagePath={formData.signatureImagePath}
-                        signatureImageHeightCm={formData.signatureImageHeightCm}
-                        onChange={(patch) => setFormData({ ...formData, ...patch })}
-                    />
+                        <UserSettingsPanel
+                            defaultUserName={formData.defaultUserName}
+                            studentId={formData.studentId}
+                            signatureImagePath={formData.signatureImagePath}
+                            signatureImageHeightCm={formData.signatureImageHeightCm}
+                            onChange={(patch) => setFormData({ ...formData, ...patch })}
+                        />
                     </AccordionPanel>
                 </AccordionItem>
                 <AccordionItem value="appearance">
-                    <AccordionHeader>
-                        {t("settings.appearance")}
-                    </AccordionHeader>
+                    <AccordionHeader>{t("settings.appearance")}</AccordionHeader>
                     <AccordionPanel>
-                    <AppearanceSettingsPanel
-                        theme={formData.theme as 'light'|'dark'|'system' | undefined}
-                        previewWidth={formData.hoverPreviewWidth}
-                        previewHeight={formData.hoverPreviewHeight}
-                        onThemeChange={(t) => setFormData({ ...formData, theme: t })}
-                        onPreviewChange={(p) => setFormData({ ...formData, hoverPreviewWidth: p.width ?? formData.hoverPreviewWidth, hoverPreviewHeight: p.height ?? formData.hoverPreviewHeight })}
-                    />
+                        <AppearanceSettingsPanel
+                            theme={formData.theme as "light" | "dark" | "system" | undefined}
+                            previewWidth={formData.hoverPreviewWidth}
+                            previewHeight={formData.hoverPreviewHeight}
+                            onThemeChange={(t) => setFormData({ ...formData, theme: t })}
+                            onPreviewChange={(p) =>
+                                setFormData({
+                                    ...formData,
+                                    hoverPreviewWidth: p.width ?? formData.hoverPreviewWidth,
+                                    hoverPreviewHeight: p.height ?? formData.hoverPreviewHeight,
+                                })
+                            }
+                        />
                     </AccordionPanel>
                 </AccordionItem>
 
                 <AccordionItem value="wm">
-                    <AccordionHeader>
-                        {t("settings.watermark")}
-                    </AccordionHeader>
+                    <AccordionHeader>{t("settings.watermark")}</AccordionHeader>
                     <AccordionPanel>
                         <WatermarkSettingsPanel wm={wm} fonts={fonts} onChange={updateWatermark} />
                     </AccordionPanel>
                 </AccordionItem>
                 <AccordionItem value="preferences">
-                    <AccordionHeader>
-                        {t("settings.preferences")}
-                    </AccordionHeader>
+                    <AccordionHeader>{t("settings.preferences")}</AccordionHeader>
                     <AccordionPanel>
-                    <PreferenceSettingsPanel
-                        defaultStoragePath={formData.defaultStoragePath}
-                        autoWatermarkImages={formData.autoWatermarkImages}
-                        onChange={(patch) => {
-                            if (patch.defaultStoragePath !== undefined) {
-                                const p = patch.defaultStoragePath;
-                                const current = settings.defaultStoragePath;
-                                if (p && p !== current) {
-                                    setPendingStoragePath(p);
-                                    setConfirmOpen(true);
-                                } else {
-                                    setFormData({ ...formData, defaultStoragePath: p });
+                        <PreferenceSettingsPanel
+                            defaultStoragePath={formData.defaultStoragePath}
+                            autoWatermarkImages={formData.autoWatermarkImages}
+                            onChange={(patch) => {
+                                if (patch.defaultStoragePath !== undefined) {
+                                    const p = patch.defaultStoragePath;
+                                    const current = settings.defaultStoragePath;
+                                    if (p && p !== current) {
+                                        setPendingStoragePath(p);
+                                        setConfirmOpen(true);
+                                    } else {
+                                        setFormData({ ...formData, defaultStoragePath: p });
+                                    }
                                 }
-                            }
-                            if (patch.autoWatermarkImages !== undefined) {
-                                setFormData({ ...formData, autoWatermarkImages: patch.autoWatermarkImages });
-                            }
-                        }}
-                    />
+                                if (patch.autoWatermarkImages !== undefined) {
+                                    setFormData({ ...formData, autoWatermarkImages: patch.autoWatermarkImages });
+                                }
+                            }}
+                        />
                     </AccordionPanel>
                 </AccordionItem>
                 <AccordionItem value="language">
                     <AccordionHeader>
-                        <LocalLanguage16Regular />&nbsp;{t("settings.language")}
+                        <LocalLanguage16Regular />
+                        &nbsp;{t("settings.language")}
                     </AccordionHeader>
                     <AccordionPanel>
                         <LanguageSettingsPanel
-                            language={(formData.language as 'en'|'zh') || 'en'}
+                            language={(formData.language as "en" | "zh") || "en"}
                             onChange={(lang) => setFormData({ ...formData, language: lang })}
                         />
                     </AccordionPanel>
                 </AccordionItem>
             </Accordion>
-            
-
-            
         </div>
     );
 }

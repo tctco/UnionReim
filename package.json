@@ -1,12 +1,12 @@
 {
-  "name": "electron-fluent-ui",
-  "description": "Template for developing Electron applications using TypeScript and Fluent UI React components",
-  "version": "4.4.3",
+  "name": "UnionReim",
+  "description": "An application for managing your reimbursement materials",
+  "version": "0.1.0",
   "license": "MIT",
   "author": {
-    "email": "oliver.schwendener@proton.me",
-    "name": "Oliver Schwendener",
-    "url": "https://github.com/oliverschwendener"
+    "email": "chengtang@hust.edu.cn",
+    "name": "tctco",
+    "url": "https://github.com/tctco"
   },
   "main": "dist-main/index.js",
   "scripts": {
