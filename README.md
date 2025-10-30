@@ -6,6 +6,9 @@
 
 > A tool for managing reimbursement materials and any structured documents.
 
+> [!IMPORTANT]  
+> 对中文用户，如果您使用图片自动水印功能，您需要在 **设置 - 水印** 选项卡中指定中文字体，或手动为图片打水印的时候指定中文字体（见**11. Preview and edit images before watermarking**）
+
 
 ## Overview
 
