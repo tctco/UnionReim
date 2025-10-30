@@ -55,11 +55,6 @@ jobs:
             # - name: Prettier check
             #   run: npm run prettier:check
 
-            - name: Build
-              run: npm run build
-              env:
-                  NODE_ENV: production
-
             - name: Derive VITE_APP_VERSION from tag (strip leading 'v')
               uses: actions/github-script@v7
               with:
@@ -67,6 +62,11 @@ jobs:
                       const ref = process.env.GITHUB_REF_NAME || '';
                       const ver = ref.startsWith('v') ? ref.slice(1) : ref;
                       core.exportVariable('VITE_APP_VERSION', ver);
+
+            - name: Build
+              run: npm run build
+              env:
+                  NODE_ENV: production
 
             - name: Package and publish
               run: npm run package:publish
@@ -86,6 +86,8 @@ jobs:
               uses: softprops/action-gh-release@v2
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
+                  tag_name: ${{ github.ref_name }}
+                  fail_on_unmatched_files: true
                   files: |
-                      src/static/document_未使用公务卡报销情况说明.json
-                      src/static/template_国内差旅.json
+                      src/static/document_WHUH_reimbursement_without_corporate_card.json
+                      src/static/template_WHUH_domestic_travel.json

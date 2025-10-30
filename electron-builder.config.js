@@ -11,7 +11,7 @@ const baseConfig = {
     },
     files: ["dist-main/index.js", "dist-preload/index.js", "dist-renderer/**/*"],
     artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
-    publish: [{ provider: "github" }],
+    publish: [{ provider: "github", overwrite: false }],
     extraMetadata: {
         "chromium-ffmpeg": false
     },
