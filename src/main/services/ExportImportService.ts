@@ -1,4 +1,4 @@
-import type { Project, ProjectMetadata, Template, TemplateWithItems, TemplateExportManifest, DocumentTemplateExportManifest } from "@common/types";
+import type { ProjectMetadata, TemplateExportManifest, DocumentTemplateExportManifest, TemplateWithItems } from "@common/types";
 import AdmZip from "adm-zip";
 import { app } from "electron";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -38,6 +38,7 @@ interface ExportManifest {
             file_name: string;
             has_watermark: boolean;
             watermarked_file_name?: string;
+            expenditure?: number;
         }>;
     }>;
 }
@@ -53,6 +54,48 @@ export class ExportImportService {
         this.templateService = new TemplateService();
         this.attachmentService = new AttachmentService();
         this.documentService = new DocumentService();
+    }
+
+    /**
+     * Returns true if the manifest template definition is equivalent to an existing template with items.
+     */
+    private areTemplatesEquivalent(manifestTemplate: ExportManifest["template"], existing: TemplateWithItems): boolean {
+        // Compare basic fields
+        const manifestDesc = manifestTemplate.description ?? undefined;
+        const existingDesc = existing.description ?? undefined;
+        if (manifestDesc !== existingDesc) return false;
+
+        // Compare items by name (order-insensitive)
+        const manifestItems = manifestTemplate.items || [];
+        const existingItems = existing.items || [];
+
+        if (manifestItems.length !== existingItems.length) return false;
+
+        const toKey = (arr?: string[]) => (arr || []).slice().sort().join("|");
+        const existingByName = new Map(existingItems.map((i) => [i.name, i]));
+
+        for (const mi of manifestItems) {
+            const ei = existingByName.get(mi.name);
+            if (!ei) return false;
+
+            const miDesc = mi.description ?? undefined;
+            const eiDesc = ei.description ?? undefined;
+
+            if (miDesc !== eiDesc) return false;
+            if (Boolean(mi.is_required) !== Boolean(ei.is_required)) return false;
+            if (toKey(mi.file_types) !== toKey(ei.file_types)) return false;
+            if (Boolean(mi.needs_watermark) !== Boolean(ei.needs_watermark)) return false;
+            const miWm = mi.watermark_template ?? undefined;
+            const eiWm = ei.watermark_template ?? undefined;
+            if (miWm !== eiWm) return false;
+            if (Boolean(mi.allows_multiple_files) !== Boolean(ei.allows_multiple_files)) return false;
+            if ((mi.display_order ?? 0) !== (ei.display_order ?? 0)) return false;
+            const miCat = mi.category ?? undefined;
+            const eiCat = ei.category ?? undefined;
+            if (miCat !== eiCat) return false;
+        }
+
+        return true;
     }
 
     // Export a project to ZIP
@@ -109,6 +152,7 @@ export class ExportImportService {
                         original_name: attachment.original_name,
                         file_name: attachment.file_name,
                         has_watermark: attachment.has_watermark,
+                        expenditure: (attachment as unknown as { expenditure?: number }).expenditure ?? 0,
                     });
 
                     // Add watermarked version if exists
@@ -257,15 +301,31 @@ export class ExportImportService {
             throw new Error(`Unsupported export version: ${manifest.version}`);
         }
 
-        // Create or find template
-        let template = this.templateService
-            .listTemplates()
-            .find((t) => t.name === manifest.template.name);
+        // Create or find template with deep equality check
+        const templates = this.templateService.listTemplates();
+        let template = templates.find((t) => t.name === manifest.template.name);
 
-        if (!template) {
-            // Create new template
+        let reuseExisting = false;
+        if (template) {
+            const existingWithItems = this.templateService.getTemplateWithItems(template.template_id);
+            if (existingWithItems && this.areTemplatesEquivalent(manifest.template, existingWithItems)) {
+                reuseExisting = true;
+            }
+        }
+
+        if (!template || !reuseExisting) {
+            // Create new template (generate unique name if needed)
+            let templateName = manifest.template.name;
+            if (templates.some((t) => t.name === templateName)) {
+                let counter = 1;
+                while (templates.some((t) => t.name === `${manifest.template.name} (${counter})`)) {
+                    counter++;
+                }
+                templateName = `${manifest.template.name} (${counter})`;
+            }
+
             template = this.templateService.createTemplate({
-                name: manifest.template.name,
+                name: templateName,
                 description: manifest.template.description,
             });
 
@@ -324,6 +384,12 @@ export class ExportImportService {
                     tempFilePath,
                     fileInfo.original_name,
                 );
+
+                // Restore expenditure if present in manifest
+                const exp = (fileInfo as unknown as { expenditure?: number }).expenditure;
+                if (typeof exp === 'number' && Number.isFinite(exp)) {
+                    try { this.attachmentService.setExpenditure(attachment.attachment_id, exp); } catch { /* ignore */ }
+                }
 
                 // Import watermarked version if exists
                 if (fileInfo.has_watermark && fileInfo.watermarked_file_name) {
