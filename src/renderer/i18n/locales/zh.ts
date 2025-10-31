@@ -212,6 +212,7 @@ export default {
     statusUpdateFailed: "更新状态失败",
     requiredItemsMissing: "部分必填项缺失",
     copied: "已复制",
+    totalExpenditure: "总开销",
   },
   breadcrumbs: {
     home: "首页",
@@ -244,11 +245,17 @@ export default {
       size: "大小",
       type: "类型",
       status: "状态",
+      expenditure: "Expenditure",
     },
     status: {
       watermarked: "已加水印",
       original: "原始",
-    }
+    },
+    setExpenditureTitle: "设置开销",
+    setExpenditureLabel: "输入开销（整数）",
+    moneyTag: "Money: {n}",
+    deleteDialogTitle: "删除文件",
+    deleteDialogMessage: "确定要删除文件 \"{name}\"？此操作无法撤销。",
   },
   home: {
     welcome: "欢迎使用UnionReim票据匣",

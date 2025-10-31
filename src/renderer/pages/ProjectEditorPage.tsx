@@ -406,6 +406,40 @@ export function ProjectEditorPage() {
         }
     };
 
+    // Expenditure dialog state and handlers
+    const [expTarget, setExpTarget] = useState<Attachment | null>(null);
+    const [expInput, setExpInput] = useState<string>("");
+    const openExpenditureDialog = (attachment: Attachment) => {
+        setExpTarget(attachment);
+        const current = (attachment as unknown as { expenditure?: number }).expenditure ?? 0;
+        setExpInput(String(current));
+    };
+    const closeExpenditureDialog = () => {
+        setExpTarget(null);
+        setExpInput("");
+    };
+    const confirmExpenditure = async () => {
+        if (!expTarget) {
+            closeExpenditureDialog();
+            return;
+        }
+        const parsed = Number(expInput);
+        const value = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
+        try {
+            await showUpdateToast(async () => {
+                await window.ContextBridge.attachment.setExpenditure(expTarget.attachment_id, value);
+                return null as unknown as void;
+            });
+            if (projectId) {
+                await loadProject(projectId);
+            }
+        } catch (err) {
+            console.error("Failed to set expenditure:", err);
+        } finally {
+            closeExpenditureDialog();
+        }
+    };
+
     // Document-from-template dialog state
     const [docDialogOpen, setDocDialogOpen] = useState(false);
     const [docTargetItemId, setDocTargetItemId] = useState<number | null>(null);
@@ -608,6 +642,7 @@ export function ProjectEditorPage() {
                                     onCopyPathOriginal={handleCopyPathOriginal}
                                     onCopyPathWatermarked={handleCopyPathWatermarked}
                                     onOpenRename={(a) => openRenameDialog(a)}
+                                    onSetExpenditure={(a) => openExpenditureDialog(a)}
                                     onWatermark={handleWatermark}
                                     onRemoveWatermark={handleRemoveWatermark}
                                     onDelete={handleDeleteClick}
@@ -640,16 +675,28 @@ export function ProjectEditorPage() {
                 onConfirm={confirmRename}
             />
 
+            <RenameDialogSimple
+                open={!!expTarget}
+                value={expInput}
+                onChange={setExpInput}
+                onCancel={closeExpenditureDialog}
+                onConfirm={confirmExpenditure}
+                title={t("attachments.setExpenditureTitle") || "Set Expenditure"}
+                label={t("attachments.setExpenditureLabel") || "Enter amount (integer)"}
+                confirmText={t("common.save")}
+                cancelText={t("common.cancel")}
+            />
+
             {/* Delete Confirmation Dialog */}
             <ConfirmDialog
-                title="删除文件"
+                title={t("attachments.deleteDialogTitle")}
                 message={
                     deleteConfirmAttachment
-                        ? `确定要删除文件 "${deleteConfirmAttachment.original_name}"？此操作无法撤销。`
+                        ? t("attachments.deleteDialogMessage", { name: deleteConfirmAttachment.original_name })
                         : ""
                 }
-                confirmText="删除"
-                cancelText="取消"
+                confirmText={t("common.delete")}
+                cancelText={t("common.cancel")}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeleteConfirmAttachment(null)}
                 open={!!deleteConfirmAttachment}

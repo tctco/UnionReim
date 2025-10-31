@@ -4,6 +4,7 @@ import { Badge, Body1, Button, Caption1, Card, tokens } from "@fluentui/react-co
 import { ArrowUpload24Regular, DocumentAdd24Regular, DocumentRegular } from "@fluentui/react-icons";
 import React from "react";
 import AttachmentRowActions from "./AttachmentRowActions";
+import { useI18n } from "../../i18n";
 
 type UploadCandidate = { path: string; original_name?: string };
 
@@ -26,12 +27,14 @@ export default function ProjectItemCard(props: {
     onCopyPathOriginal: (a: Attachment) => void;
     onCopyPathWatermarked: (a: Attachment) => void;
     onOpenRename: (a: Attachment) => void;
+    onSetExpenditure: (a: Attachment) => void;
     onWatermark: (a: Attachment) => void;
     onRemoveWatermark: (a: Attachment) => void;
     onDelete: (a: Attachment) => void;
     onAddFromDocument?: (project_item_id: number) => void;
     classes: { itemCard: string; itemHeader: string; attachmentList: string; attachmentItem: string };
 }) {
+    const { t } = useI18n();
     const {
         item,
         selected,
@@ -46,6 +49,7 @@ export default function ProjectItemCard(props: {
         onCopyPathOriginal,
         onCopyPathWatermarked,
         onOpenRename,
+        onSetExpenditure,
         onWatermark,
         onDelete,
         onRemoveWatermark,
@@ -139,6 +143,9 @@ export default function ProjectItemCard(props: {
                                 <DocumentRegular />
                                 <Caption1>{attachment.original_name}</Caption1>
                                 {attachment.has_watermark && <Badge color="success">Watermarked</Badge>}
+                                {(((attachment as unknown as { expenditure?: number }).expenditure ?? 0) !== 0) && (
+                                    <Badge>{t("attachments.moneyTag", { n: (attachment as unknown as { expenditure?: number }).expenditure }) || `Money: ${(attachment as unknown as { expenditure?: number }).expenditure}`}</Badge>
+                                )}
                             </div>
                             <AttachmentRowActions
                                 attachment={attachment}
@@ -148,6 +155,7 @@ export default function ProjectItemCard(props: {
                                 onCopyPathOriginal={onCopyPathOriginal}
                                 onCopyPathWatermarked={onCopyPathWatermarked}
                                 onOpenRename={onOpenRename}
+                                onSetExpenditure={onSetExpenditure}
                                 onWatermark={onWatermark}
                                 onRemoveWatermark={onRemoveWatermark}
                                 onDelete={onDelete}

@@ -63,6 +63,7 @@ export interface Attachment {
     file_path: string;
     file_type: string;
     file_size: number;
+    expenditure?: number;
     has_watermark: boolean;
     watermarked_path?: string;
     upload_time: number;

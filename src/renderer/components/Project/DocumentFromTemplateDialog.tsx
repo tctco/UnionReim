@@ -16,6 +16,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../../i18n";
 import QuillEditor from "../Common/QuillEditor";
+import { resolveWatermarkTemplate } from "@common/watermarkPlaceholders";
 
 const useStyles = makeStyles({
     layout: { display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "stretch" },
@@ -25,10 +26,6 @@ const useStyles = makeStyles({
         background: tokens.colorNeutralBackground1,
     },
 });
-
-function apply(html: string, values: Record<string, string>): string {
-    return html.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, k) => values[k] ?? `{${k}}`);
-}
 
 export default function DocumentFromTemplateDialog(props: {
     open: boolean;
@@ -46,7 +43,7 @@ export default function DocumentFromTemplateDialog(props: {
     const [loading, setLoading] = useState(false);
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
     const [selectedId, setSelectedId] = useState<string>("");
-    const [values, setValues] = useState<Record<string, string>>({});
+    const [values, setValues] = useState<Record<string, string | number>>({});
     const [baseHtml, setBaseHtml] = useState<string>("");
     const [editedHtml, setEditedHtml] = useState<string>("");
 
@@ -55,7 +52,7 @@ export default function DocumentFromTemplateDialog(props: {
         [templates, selectedId],
     );
 
-    const previewHtml = useMemo(() => apply(baseHtml, values), [baseHtml, values]);
+    const previewHtml = useMemo(() => resolveWatermarkTemplate(baseHtml, values), [baseHtml, values]);
 
     useEffect(() => {
         if (!open) return;
@@ -77,17 +74,29 @@ export default function DocumentFromTemplateDialog(props: {
     useEffect(() => {
         (async () => {
             const s = await window.ContextBridge.settings.get();
-            const v: Record<string, string> = {};
-            if (s.success && s.data) {
-                if (s.data.defaultUserName) v.userName = s.data.defaultUserName;
-                if (s.data.studentId) v.studentId = s.data.studentId;
-            }
+            const v: Record<string, string | number> = {};
+            // Prefer provided projectCreator as userName, fallback to defaultUserName
+            if (projectCreator) v.userName = projectCreator;
+            if (!v.userName && s.success && s.data && s.data.defaultUserName) v.userName = s.data.defaultUserName;
+            if (s.success && s.data && s.data.studentId) v.studentId = s.data.studentId;
             if (projectName) v.projectName = projectName;
-            if (projectCreator) v.creator = projectCreator;
             v.date = new Date().toISOString().slice(0, 10);
+
+            // Optionally compute projectExpenditure if available
+            try {
+                const res = await window.ContextBridge.project.get(projectId);
+                if (res.success && res.data) {
+                    const details = res.data as unknown as { items: Array<{ attachments: Array<{ expenditure?: number }> }> };
+                    const sum = details.items.reduce((acc, item) => acc + item.attachments.reduce((s2, a) => s2 + (a.expenditure ?? 0), 0), 0);
+                    v.projectExpenditure = sum;
+                }
+            } catch {
+                // ignore computation errors
+            }
+
             setValues(v);
         })();
-    }, [projectName, projectCreator]);
+    }, [projectId, projectName, projectCreator]);
 
     const onSelectTemplate = async (id: string) => {
         setSelectedId(id);

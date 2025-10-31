@@ -422,6 +422,15 @@ export function registerIpcHandlers(): void {
         }),
     );
 
+    ipcMain.handle(
+        "attachment:setExpenditure",
+        respond((attachment_id: number, amount: number) => {
+            const updated = attachmentService.setExpenditure(attachment_id, amount);
+            if (!updated) throw new Error("Attachment not found");
+            return updated;
+        }),
+    );
+
     // Migrate storage root and persist the setting
     ipcMain.handle(
         "attachment:migrateStorage",

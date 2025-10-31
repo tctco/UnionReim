@@ -212,6 +212,7 @@ export default {
     statusUpdateFailed: "Failed to update status",
     requiredItemsMissing: "Some required items are missing",
     copied: "Copied",
+    totalExpenditure: "Total Expenditure",
   },
   breadcrumbs: {
     home: "Home",
@@ -244,11 +245,17 @@ export default {
       size: "Size",
       type: "Type",
       status: "Status",
+      expenditure: "Expenditure",
     },
     status: {
       watermarked: "Watermarked",
       original: "Original",
-    }
+    },
+    setExpenditureTitle: "Set Expenditure",
+    setExpenditureLabel: "Enter amount (integer)",
+    moneyTag: "Money: {n}",
+    deleteDialogTitle: "Delete File",
+    deleteDialogMessage: "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
   },
   home: {
     welcome: "Welcome to UnionReim",

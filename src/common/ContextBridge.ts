@@ -94,6 +94,7 @@ export type ContextBridge = {
         getRelativePath: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<string>>;
         openExternal: (attachment_id: number, use_watermarked?: boolean) => Promise<ApiResponse<void>>;
         rename: (attachment_id: number, new_name: string) => Promise<ApiResponse<Attachment>>;
+        setExpenditure: (attachment_id: number, amount: number) => Promise<ApiResponse<Attachment>>;
         uploadFromPaths: (
             project_item_id: number,
             files: Array<{ path: string; original_name?: string }>,

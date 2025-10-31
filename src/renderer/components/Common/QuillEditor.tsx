@@ -318,7 +318,6 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     }
 
                     // If panel open, update query and filter, or close on invalidation
-                    console.log("acVisible", acVisible, triggerIndexRef.current, index);
                     if (acVisibleRef.current && triggerIndexRef.current !== null && index !== null) {
                         const start = triggerIndexRef.current;
                         if (index < start) {

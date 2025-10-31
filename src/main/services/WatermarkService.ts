@@ -119,12 +119,20 @@ export class WatermarkService {
 
         // Replace placeholders via shared resolver
         const appSettings = this.settingsService.getAppSettings();
+        // Compute total project expenditure by summing all attachments' expenditure
+        const details = this.projectService.getProjectWithDetails(project.project_id);
+        const projectExpenditure = details
+            ? details.items.reduce((sum, item) => sum + item.attachments.reduce((acc, a) => acc + ((a as unknown as { expenditure?: number }).expenditure ?? 0), 0), 0)
+            : 0;
+        console.log("projectExpenditure", projectExpenditure);
+
         return resolveWatermarkTemplate(templateItem.watermark_template, {
             userName: project.creator || "User",
             studentId: appSettings.studentId,
             itemName: templateItem.name,
             projectName: project.name,
             date: new Date().toLocaleDateString(),
+            projectExpenditure: projectExpenditure.toString(),
         });
     }
 

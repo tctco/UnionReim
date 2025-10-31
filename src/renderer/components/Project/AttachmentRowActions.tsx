@@ -1,6 +1,6 @@
 import type { Attachment } from "@common/types";
 import { Button, Tooltip, Menu, MenuTrigger, MenuPopover, MenuList, MenuItem } from "@fluentui/react-components";
-import { Copy24Regular, Delete24Regular, Eye24Regular, Rename24Regular, Sparkle24Regular, Eraser24Regular } from "@fluentui/react-icons";
+import { Copy24Regular, Delete24Regular, Eye24Regular, Rename24Regular, Sparkle24Regular, Eraser24Regular, CurrencyDollarEuroRegular } from "@fluentui/react-icons";
 import { WATERMARK_IMAGE_EXTS } from "@common/constants";
 
 /**
@@ -15,11 +15,12 @@ export default function AttachmentRowActions(props: {
   onCopyPathOriginal: (a: Attachment) => void;
   onCopyPathWatermarked: (a: Attachment) => void;
   onOpenRename: (a: Attachment) => void;
+  onSetExpenditure: (a: Attachment) => void;
   onWatermark: (a: Attachment) => void;
   onRemoveWatermark?: (a: Attachment) => void;
   onDelete: (a: Attachment) => void;
 }) {
-  const { attachment, needsWatermark, onPreviewOriginal, onPreviewWatermarked, onCopyPathOriginal, onCopyPathWatermarked, onOpenRename, onWatermark, onRemoveWatermark, onDelete } = props;
+  const { attachment, needsWatermark, onPreviewOriginal, onPreviewWatermarked, onCopyPathOriginal, onCopyPathWatermarked, onOpenRename, onSetExpenditure, onWatermark, onRemoveWatermark, onDelete } = props;
   return (
     <div style={{ display: "flex", gap: "4px" }}>
       <Menu>
@@ -49,6 +50,9 @@ export default function AttachmentRowActions(props: {
           </MenuList>
         </MenuPopover>
       </Menu>
+      <Tooltip content="Set expenditure" relationship="label">
+        <Button size="small" icon={<CurrencyDollarEuroRegular />} onClick={() => onSetExpenditure(attachment)} appearance="subtle" />
+      </Tooltip>
       <Tooltip content="Rename" relationship="label">
         <Button size="small" icon={<Rename24Regular />} onClick={() => onOpenRename(attachment)} appearance="subtle" />
       </Tooltip>

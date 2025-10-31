@@ -189,7 +189,7 @@ export class AttachmentService {
     getAttachment(attachment_id: number): Attachment | null {
         const stmt = this.db.prepare(`
             SELECT attachment_id, project_item_id, file_name, original_name, file_path,
-                   file_type, file_size, has_watermark, watermarked_path, upload_time, metadata
+                   file_type, file_size, expenditure, has_watermark, watermarked_path, upload_time, metadata
             FROM attachments
             WHERE attachment_id = ?
         `);
@@ -204,6 +204,7 @@ export class AttachmentService {
                   file_type: string;
                   file_size: number;
                   has_watermark: number;
+                  expenditure?: number;
                   watermarked_path?: string | null;
                   upload_time: number;
                   metadata?: string | null;
@@ -219,6 +220,7 @@ export class AttachmentService {
             file_path: row.file_path,
             file_type: row.file_type,
             file_size: row.file_size,
+            expenditure: row.expenditure ?? 0,
             has_watermark: Boolean(row.has_watermark),
             watermarked_path: row.watermarked_path || undefined,
             upload_time: row.upload_time,
@@ -230,7 +232,7 @@ export class AttachmentService {
     listAttachments(project_item_id: number): Attachment[] {
         const stmt = this.db.prepare(`
             SELECT attachment_id, project_item_id, file_name, original_name, file_path,
-                   file_type, file_size, has_watermark, watermarked_path, upload_time, metadata
+                   file_type, file_size, expenditure, has_watermark, watermarked_path, upload_time, metadata
             FROM attachments
             WHERE project_item_id = ?
             ORDER BY upload_time ASC
@@ -245,6 +247,7 @@ export class AttachmentService {
             file_type: string;
             file_size: number;
             has_watermark: number;
+            expenditure?: number;
             watermarked_path?: string | null;
             upload_time: number;
             metadata?: string | null;
@@ -257,11 +260,25 @@ export class AttachmentService {
             file_path: row.file_path,
             file_type: row.file_type,
             file_size: row.file_size,
+            expenditure: row.expenditure ?? 0,
             has_watermark: Boolean(row.has_watermark),
             watermarked_path: row.watermarked_path || undefined,
             upload_time: row.upload_time,
             metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
         }));
+    }
+
+    // Update expenditure value for an attachment
+    setExpenditure(attachment_id: number, amount: number): Attachment | null {
+        const normalized = Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+        const stmt = this.db.prepare(`
+            UPDATE attachments
+            SET expenditure = ?
+            WHERE attachment_id = ?
+        `);
+        const result = stmt.run(normalized, attachment_id);
+        if (result.changes === 0) return null;
+        return this.getAttachment(attachment_id);
     }
 
     deleteAttachment(attachment_id: number): boolean {

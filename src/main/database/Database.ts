@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     file_path TEXT NOT NULL,
     file_type TEXT NOT NULL,
     file_size INTEGER NOT NULL,
+    expenditure INTEGER DEFAULT 0,
     has_watermark INTEGER DEFAULT 0,
     watermarked_path TEXT,
     upload_time INTEGER NOT NULL,
@@ -208,7 +209,26 @@ export class DatabaseService {
             }
         }
 
-        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 3)}`);
+        // Migration 4: Add expenditure field to attachments table
+        if (currentVersion < 4) {
+            try {
+                const columnExists = this.db.prepare(`
+                    SELECT COUNT(*) as count FROM pragma_table_info('attachments')
+                    WHERE name = 'expenditure'
+                `).get() as { count: number };
+
+                if (columnExists.count === 0) {
+                    this.db.exec('ALTER TABLE attachments ADD COLUMN expenditure INTEGER DEFAULT 0');
+                    console.log('Migration 4: Added expenditure column to attachments table');
+                }
+
+                this.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(4, Date.now());
+            } catch (error) {
+                console.error('Migration 4 failed:', error);
+            }
+        }
+
+        console.log(`Database migrations completed. Current version: ${Math.max(currentVersion, 4)}`);
     }
 
     public getDatabase(): Database.Database {

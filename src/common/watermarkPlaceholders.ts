@@ -10,6 +10,7 @@ export const WATERMARK_PLACEHOLDERS: readonly WatermarkPlaceholder[] = [
   { token: "{itemName}", label: "Item Name", description: "Template item name" },
   { token: "{projectName}", label: "Project Name", description: "Project name" },
   { token: "{date}", label: "Date", description: "Current date (locale)" },
+  { token: "{projectExpenditure}", label: "Project Expenditure", description: "Sum of all attachments' expenditure" },
   { token: "{signatureImage}", label: "Signature Image", description: "User signature image" },
 ] as const;
 
@@ -28,4 +29,10 @@ export function resolveWatermarkTemplate(
     text = text.replace(token, String(value));
   }
   return text;
+}
+
+export function calculateProjectExpenditure(
+  attachments: Array<{ expenditure?: number }>,
+): number {
+  return attachments.reduce((sum, a) => sum + (a.expenditure ?? 0), 0);
 }

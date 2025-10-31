@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
         getRelativePath: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:getRelativePath", attachment_id, use_watermarked),
         openExternal: (attachment_id, use_watermarked) => ipcRenderer.invoke("attachment:openExternal", attachment_id, use_watermarked),
         rename: (attachment_id, new_name) => ipcRenderer.invoke("attachment:rename", attachment_id, new_name),
+        setExpenditure: (attachment_id, amount) => ipcRenderer.invoke("attachment:setExpenditure", attachment_id, amount),
         uploadFromPaths: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromPaths", project_item_id, files),
         uploadFromData: (project_item_id, files) => ipcRenderer.invoke("attachment:uploadFromData", project_item_id, files),
         migrateStorage: (newRoot) => ipcRenderer.invoke("attachment:migrateStorage", newRoot),

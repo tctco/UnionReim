@@ -163,6 +163,12 @@ export function ProjectPreviewPage() {
         ? `${t("projects.requiredFieldsProgress")}：${completedRequiredItems.length}/${requiredItems.length} ${t("projects.completed")}`
         : "";
 
+    // Calculate total project expenditure from all attachments
+    const projectExpenditure = project.items.reduce((sum, item) => {
+        const itemSum = item.attachments.reduce((acc, a) => acc + ((a as unknown as { expenditure?: number }).expenditure ?? 0), 0);
+        return sum + itemSum;
+    }, 0);
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -205,6 +211,10 @@ export function ProjectPreviewPage() {
                     <div className={styles.metadataItem}>
                         <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.status")}</Caption1>
                         <Body1>{project.status}</Body1>
+                    </div>
+                    <div className={styles.metadataItem}>
+                        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>{t("projects.totalExpenditure") || "Total Expenditure"}</Caption1>
+                        <Body1>{projectExpenditure}</Body1>
                     </div>
                     {project.metadata?.description && (
                         <div className={styles.metadataItem} style={{ gridColumn: "1 / -1" }}>
@@ -249,6 +259,7 @@ export function ProjectPreviewPage() {
                                         <TableHeaderCell>{t("attachments.table.size")}</TableHeaderCell>
                                         <TableHeaderCell>{t("attachments.table.type")}</TableHeaderCell>
                                         <TableHeaderCell>{t("attachments.table.status")}</TableHeaderCell>
+                                        <TableHeaderCell>{t("attachments.table.expenditure")}</TableHeaderCell>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -278,6 +289,7 @@ export function ProjectPreviewPage() {
                                                     <Caption1>{t("attachments.status.original")}</Caption1>
                                                 )}
                                             </TableCell>
+                                            <TableCell>{(attachment as unknown as { expenditure?: number }).expenditure ?? 0}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
