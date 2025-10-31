@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import { forwardRef, useEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
 import type { WatermarkPlaceholder } from "../../../common/watermarkPlaceholders";
 
 type AutocompleteOverlayProps = {
@@ -13,10 +14,41 @@ type AutocompleteOverlayProps = {
 
 const AutocompleteOverlay = forwardRef<HTMLDivElement, AutocompleteOverlayProps>(
   ({ visible, top, left, items, selectedIndex, onSelect, onHoverIndex }, ref) => {
+    // Local ref for scroll calculations while preserving forwarded ref
+    const innerRef = useRef<HTMLDivElement | null>(null);
+
+    // Auto-scroll the selected item into view when selection or visibility changes
+    useEffect(() => {
+      if (!visible) return;
+      const container = innerRef.current;
+      if (!container) return;
+      if (items.length === 0) return;
+      const idx = selectedIndex;
+      if (idx < 0 || idx >= items.length) return;
+      const el = container.children[idx] as HTMLElement | undefined;
+      if (!el) return;
+
+      const itemTop = el.offsetTop;
+      const itemBottom = itemTop + el.offsetHeight;
+      const viewTop = container.scrollTop;
+      const viewBottom = viewTop + container.clientHeight;
+      const margin = 4;
+
+      if (itemTop < viewTop) {
+        container.scrollTop = itemTop - margin;
+      } else if (itemBottom > viewBottom) {
+        container.scrollTop = itemBottom - container.clientHeight + margin;
+      }
+    }, [selectedIndex, visible, items.length]);
+
     // Always render so the parent can measure offsetWidth/Height even when hidden.
     return (
       <div
-        ref={ref}
+        ref={(node) => {
+          innerRef.current = node;
+          if (typeof ref === "function") ref(node);
+          else if (ref) (ref as MutableRefObject<HTMLDivElement | null>).current = node;
+        }}
         style={{
           position: "absolute",
           top: top,

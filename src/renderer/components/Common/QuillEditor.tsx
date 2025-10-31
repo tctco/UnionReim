@@ -48,9 +48,6 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             acItemsRef.current = acItems;
         }, [acItems]);
         useEffect(() => {
-            acSelectedRef.current = acSelected;
-        }, [acSelected]);
-        useEffect(() => {
             acVisibleRef.current = acVisible;
         }, [acVisible]);
 
@@ -304,14 +301,18 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                         // Trigger at the exact index of '{' (caret is after it)
                         const triggerIndex = index !== null ? Math.max(0, index - 1) : null;
                         if (triggerIndex !== null) {
-                            triggerIndexRef.current = triggerIndex;
+                            const selText = quill.getText(triggerIndex, 1);
+                            if (selText === '\n') 
+                                triggerIndexRef.current = triggerIndex + 1;
+                            else
+                                triggerIndexRef.current = triggerIndex;
                             queryRef.current = "";
                             setAcItems(WATERMARK_PLACEHOLDERS);
                             setAcSelected(0);
                             const caretIndex = index || 0;
                             try {
                                 setPosFromBounds(quill.getBounds(caretIndex) as any);
-                            } catch {}
+                            } catch {/* noop */}
                             setAcVisible(true);
                             return;
                         }
@@ -327,6 +328,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                         }
                         const len = index - start;
                         const text = quill.getText(start, len);
+                        if (text.startsWith("\n")) return;
                         // text includes the '{' at position 0
                         if (!text || text[0] !== "{") {
                             setAcVisible(false);
@@ -361,16 +363,24 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
             // Keyboard navigation while panel open
             const root = quill.root as HTMLElement;
             const onKeyDown = (e: KeyboardEvent) => {
-                if (!acVisibleRef.current && triggerIndexRef.current == null) return;
+                if (!acVisibleRef.current || triggerIndexRef.current == null) return;
                 if (readOnly) return;
                 if (e.key === "ArrowDown") {
                     e.preventDefault();
                     const len = Math.max(1, acItemsRef.current.length);
-                    setAcSelected((i) => (i + 1) % len);
+                    setAcSelected((i) => {
+                        const next = (i + 1) % len;
+                        acSelectedRef.current = next;
+                        return next;
+                    });
                 } else if (e.key === "ArrowUp") {
                     e.preventDefault();
                     const len = Math.max(1, acItemsRef.current.length);
-                    setAcSelected((i) => (i - 1 + len) % len);
+                    setAcSelected((i) => {
+                        const next = (i - 1 + len) % len;
+                        acSelectedRef.current = next;
+                        return next;
+                    });
                 } else if (e.key === "Enter") {
                     e.preventDefault();
                     // apply selected token
@@ -384,6 +394,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     setAcVisible(false);
                     triggerIndexRef.current = null;
                 }
+                const idx = acSelectedRef.current;
             };
             root.addEventListener("keydown", onKeyDown);
 
@@ -410,6 +421,7 @@ const QuillEditor = forwardRef<Quill | null, QuillEditorProps>(
                     const start = triggerIndexRef.current;
                     if (start == null || endIndex == null) return;
                     const len = Math.max(0, endIndex - start);
+                    const text = quill.getText(start+1, len);
                     q.deleteText(start, len, Quill.sources.USER);
                     q.insertText(start, token, Quill.sources.USER);
                     q.setSelection(start + token.length, 0, Quill.sources.SILENT);
