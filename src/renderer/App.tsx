@@ -10,6 +10,7 @@ import type { AppSettings } from "@common/types";
 import { Outlet } from "react-router";
 import { AppLayout } from "./components/Layout/AppLayout";
 import { GLOBAL_TOASTER_ID } from "./utils/toastHelpers";
+import "./styles/scrollbar.css";
 
 const shouldUseDarkColors = (): boolean => window.ContextBridge.themeShouldUseDarkColors();
 
@@ -54,8 +55,10 @@ export const App = () => {
         });
     }, [themeSetting]);
 
+    const providerClass = `app-root ${theme === webDarkTheme ? "theme-dark" : "theme-light"}`;
+
     return (
-        <FluentProvider theme={theme} style={{ height: "100vh"}}>
+        <FluentProvider theme={theme} className={providerClass} style={{ height: "100vh"}}>
             {/* Global toaster to persist across route changes */}
             <Toaster toasterId={GLOBAL_TOASTER_ID} />
             <AppLayout>

@@ -1,0 +1,73 @@
+/* Global scrollbar styles aligned with Fluent UI tokens.
+   Applied within the app provider (.app-root) so it follows theme.
+*/
+
+.app-root {
+  --scrollbar-size: 12px;
+  --scrollbar-radius: 8px;
+
+  /* Default values; overridden by theme-specific classes below */
+  --scrollbar-thumb: var(--colorNeutralStroke2);
+  --scrollbar-thumb-hover: var(--colorNeutralStroke1Hover);
+  --scrollbar-thumb-active: var(--colorNeutralStroke1Pressed);
+  --scrollbar-track: transparent;
+  --scrollbar-corner: var(--colorNeutralBackground2);
+}
+
+/* Explicit per-theme overrides (values still resolve from Fluent UI tokens) */
+.app-root.theme-light {
+  --scrollbar-thumb: var(--colorNeutralStroke2);
+  --scrollbar-thumb-hover: var(--colorNeutralStroke1Hover);
+  --scrollbar-thumb-active: var(--colorNeutralStroke1Pressed);
+  --scrollbar-track: transparent;
+  --scrollbar-corner: var(--colorNeutralBackground2);
+}
+
+.app-root.theme-dark {
+  /* Dark theme tokens resolve to dark-appropriate values */
+  --scrollbar-thumb: var(--colorNeutralStroke2);
+  --scrollbar-thumb-hover: var(--colorNeutralStroke1Hover);
+  --scrollbar-thumb-active: var(--colorNeutralStroke1Pressed);
+  --scrollbar-track: transparent;
+  --scrollbar-corner: var(--colorNeutralBackground2);
+}
+
+/* Size */
+.app-root::-webkit-scrollbar,
+.app-root *::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+/* Track */
+.app-root::-webkit-scrollbar-track,
+.app-root *::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+/* Thumb */
+.app-root::-webkit-scrollbar-thumb,
+.app-root *::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+  border: 3px solid transparent; /* creates padding to make thumb feel lighter */
+  background-clip: padding-box;
+}
+
+/* Thumb hover/active states */
+.app-root::-webkit-scrollbar-thumb:hover,
+.app-root *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+.app-root::-webkit-scrollbar-thumb:active,
+.app-root *::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+}
+
+/* Corner (both scrollbars visible) */
+.app-root::-webkit-scrollbar-corner,
+.app-root *::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
