@@ -12,7 +12,8 @@ import type {
     UpdateTemplateRequest,
     WatermarkConfig,
 } from "@common/types";
-import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { autoUpdater } from "electron-updater";
 import { getFonts } from "font-list";
 import { existsSync, readdirSync } from "fs";
 import { basename } from "path";
@@ -65,12 +66,45 @@ export function registerIpcHandlers(): void {
         respond(() => settingsService.getAppSettings()),
     );
 
+    // App info
+    ipcMain.handle(
+        "app:getVersion",
+        respond(() => app.getVersion()),
+    );
+
     // Fonts handlers
     ipcMain.handle(
         "fonts:list",
         respond(async () => {
             const fonts = await getFonts({ disableQuoting: true });
             return fonts;
+        }),
+    );
+
+    // Updater handlers
+    ipcMain.handle(
+        "update:check",
+        respond(async () => {
+            // Guard dev mode (no updates when running via Vite dev server)
+            if (process.env.VITE_DEV_SERVER_URL) {
+                return { status: "not-available" as const };
+            }
+            try {
+                const result = await autoUpdater.checkForUpdates();
+                if (!result) return { status: "not-available" as const };
+                const { updateInfo, downloadPromise } = result;
+                if (downloadPromise) {
+                    await downloadPromise;
+                    return { status: "downloaded" as const };
+                }
+                // If autoDownload is false, we consider update available
+                if (updateInfo && updateInfo.version) {
+                    return { status: "available" as const };
+                }
+                return { status: "not-available" as const };
+            } catch (e) {
+                throw new Error(e instanceof Error ? e.message : String(e));
+            }
         }),
     );
 

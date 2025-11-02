@@ -1,7 +1,7 @@
 {
   "name": "UnionReim",
   "description": "An application for managing your reimbursement materials",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "license": "MIT",
   "author": {
     "email": "chengtang@hust.edu.cn",
@@ -56,6 +56,7 @@
     "animejs": "^4.2.2",
     "better-sqlite3": "^12.4.1",
     "canvas": "^3.2.0",
+    "electron-updater": "^6.6.2",
     "font-list": "^2.0.1",
     "pdf-lib": "^1.17.1",
     "quill": "^2.0.3",

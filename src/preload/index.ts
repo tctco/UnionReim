@@ -8,6 +8,11 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
     onSettingsChanged: (callback: (settings: AppSettings) => void) =>
         ipcRenderer.on("settings:changed", (_event, settings: AppSettings) => callback(settings)),
 
+    // App info
+    app: {
+        getVersion: () => ipcRenderer.invoke("app:getVersion"),
+    },
+
     // Settings operations
     settings: {
         get: () => ipcRenderer.invoke("settings:get"),
@@ -90,6 +95,11 @@ contextBridge.exposeInMainWorld("ContextBridge", <ContextBridge>{
     // Fonts operations
     fonts: {
         list: () => ipcRenderer.invoke('fonts:list'),
+    },
+
+    // App updater
+    updater: {
+        check: () => ipcRenderer.invoke('update:check'),
     },
 
     // Document template operations

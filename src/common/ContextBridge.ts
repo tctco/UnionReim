@@ -36,6 +36,11 @@ export type ContextBridge = {
     themeShouldUseDarkColors: () => boolean;
     onSettingsChanged: (callback: (settings: AppSettings) => void) => void;
 
+    // App info
+    app: {
+        getVersion: () => Promise<ApiResponse<string>>;
+    };
+
     // Settings operations
     settings: {
         get: () => Promise<ApiResponse<AppSettings>>;
@@ -124,6 +129,11 @@ export type ContextBridge = {
         resolveStoragePath: (relative: string) => Promise<ApiResponse<string>>;
         openPath: (absPath: string) => Promise<ApiResponse<boolean>>;
         isDirectoryEmpty: (absPath: string) => Promise<ApiResponse<boolean>>;
+    };
+
+    // App updater
+    updater: {
+        check: () => Promise<ApiResponse<{ status: "available" | "not-available" | "downloaded" }>>;
     };
 
     // Document template operations

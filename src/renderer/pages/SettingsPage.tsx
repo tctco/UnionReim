@@ -110,6 +110,8 @@ export function SettingsPage() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [pendingStoragePath, setPendingStoragePath] = useState<string | null>(null);
     const [fonts, setFonts] = useState<string[]>([]);
+    const [appVersion, setAppVersion] = useState<string>("");
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     // local states not needed after splitting panels
     // color popover handled by ColorPickerPopover component
@@ -170,6 +172,41 @@ export function SettingsPage() {
     useEffect(() => {
         loadFonts();
     }, []);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await window.ContextBridge.app.getVersion();
+                if (res.success && res.data) {
+                    setAppVersion(res.data);
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
+    }, []);
+
+    const handleCheckUpdate = async () => {
+        setCheckingUpdate(true);
+        try {
+            const res = await window.ContextBridge.updater.check();
+            if (res.success && res.data) {
+                if (res.data.status === "downloaded") {
+                    alert(t("settings.updateDownloaded"));
+                } else if (res.data.status === "available") {
+                    alert(t("settings.updateAvailable"));
+                } else {
+                    alert(t("settings.updateNotAvailable"));
+                }
+            } else {
+                alert(t("settings.updateCheckFailed"));
+            }
+        } catch {
+            alert(t("settings.updateCheckFailed"));
+        } finally {
+            setCheckingUpdate(false);
+        }
+    };
 
     const getDefaultWatermark = (): WatermarkSettings => ({
         textMode: "template",
@@ -368,6 +405,32 @@ export function SettingsPage() {
                             language={(formData.language as "en" | "zh") || "en"}
                             onChange={(lang) => setFormData({ ...formData, language: lang })}
                         />
+                    </AccordionPanel>
+                </AccordionItem>
+                <AccordionItem value="about">
+                    <AccordionHeader>{t("settings.about")}</AccordionHeader>
+                    <AccordionPanel>
+                        <div style={{ display: "grid", gap: 8 }}>
+                            <div>
+                                <strong>{t("settings.version")}: </strong>
+                                <span>{appVersion || t("common.unknown")}</span>
+                            </div>
+                            <div>
+                                <strong>{t("settings.author")}: </strong>
+                                <span>tctco</span>
+                            </div>
+                            <div>
+                                <strong>GitHub: </strong>
+                                <a href="https://github.com/tctco/UnionReim" target="_blank" rel="noreferrer">
+                                    https://github.com/tctco/UnionReim
+                                </a>
+                            </div>
+                            <div style={{ marginTop: 8 }}>
+                                <Button appearance="primary" onClick={handleCheckUpdate} disabled={checkingUpdate}>
+                                    {checkingUpdate ? t("settings.checkingUpdate") : t("settings.checkUpdate")}
+                                </Button>
+                            </div>
+                        </div>
                     </AccordionPanel>
                 </AccordionItem>
             </Accordion>
