@@ -118,6 +118,7 @@ export function ProjectEditorPage() {
     const [searchText, setSearchText] = useState("");
     const [editingTitle, setEditingTitle] = useState(false);
     const [editedTitle, setEditedTitle] = useState("");
+    const [editedCreator, setEditedCreator] = useState("");
     const titleTextRef = useRef<HTMLSpanElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [titleWidth, setTitleWidth] = useState<number | undefined>(undefined);
@@ -130,6 +131,7 @@ export function ProjectEditorPage() {
             setDescription(project.metadata?.description || "");
             setStatus(project.status as 'incomplete' | 'complete' | 'exported');
             setEditedTitle(project.name || "");
+            setEditedCreator(project.creator || "");
         }
     }, [project]);
 
@@ -328,14 +330,20 @@ export function ProjectEditorPage() {
 
     const handleSaveProjectTitle = async () => {
         if (!projectId) return;
-        const next = editedTitle.trim();
-        if (!next || next === project?.name) {
+        const nextName = editedTitle.trim();
+        const nextCreator = editedCreator.trim();
+        const nameUnchanged = !nextName || nextName === project?.name;
+        const creatorUnchanged = (nextCreator === (project?.creator || ""));
+        if (nameUnchanged && creatorUnchanged) {
             setEditingTitle(false);
             return;
         }
         try {
             await showUpdateToast(async () => {
-                await updateProject({ project_id: projectId, name: next });
+                const payload: { project_id: number; name?: string; creator?: string } = { project_id: projectId };
+                if (!nameUnchanged) payload.name = nextName;
+                if (!creatorUnchanged) payload.creator = nextCreator;
+                await updateProject(payload);
                 return null as unknown as void;
             });
             await loadProject(projectId);
@@ -507,8 +515,11 @@ export function ProjectEditorPage() {
     if (!project) return null;
 
     const titleNode = !editingTitle ? (
-        <span style={{ display: "inline-flex"}}>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
             <span ref={titleTextRef}>{project.name}</span>
+            <Caption1 style={{ marginLeft: 8 }}>
+                {`by ${project.creator || t('common.unknown')}`}
+            </Caption1>
             <Tooltip content={t("common.edit")} relationship="label">
                 <Button
                     size="small"
@@ -516,6 +527,7 @@ export function ProjectEditorPage() {
                     icon={<Edit16Regular />}
                     onClick={() => {
                         setEditedTitle(project.name);
+                        setEditedCreator(project.creator || "");
                         const w = titleTextRef.current?.offsetWidth;
                         setTitleWidth((w && w > 0) ? w : undefined);
                         setEditingTitle(true);
@@ -543,6 +555,21 @@ export function ProjectEditorPage() {
                     boxSizing: "content-box",
                 }}
                 ref={inputRef}
+            />
+            <Caption1>by</Caption1>
+            <Input
+                size="small"
+                appearance="underline"
+                value={editedCreator}
+                onChange={(_, data) => setEditedCreator(data.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveProjectTitle(); } }}
+                style={{
+                    backgroundColor: "transparent",
+                    padding: 0,
+                    minWidth: 120,
+                    width: "auto",
+                    boxSizing: "content-box",
+                }}
             />
             <Tooltip content={t("common.save")} relationship="label">
                 <Button
